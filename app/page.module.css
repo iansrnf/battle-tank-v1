@@ -1,0 +1,126 @@
+.wrap {
+  width: min(96vw, 920px);
+  background: linear-gradient(180deg, rgba(28, 53, 82, 0.95), rgba(18, 36, 57, 0.96));
+  border: 4px solid var(--panel-edge);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.topbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(20px, 4vw, 34px);
+  letter-spacing: 1px;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+
+.stats {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.pill {
+  border: 2px solid #9fb7d3;
+  background: #29486c;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-weight: 700;
+}
+
+.canvasFrame {
+  position: relative;
+  width: 100%;
+  border: 4px solid #a7bed8;
+  background: #0b1e30;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.canvas {
+  width: 100%;
+  max-width: 832px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  aspect-ratio: 26 / 20;
+}
+
+.controls {
+  margin-top: 12px;
+  color: #d8e4f4;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.buttonRow {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.button {
+  border: 2px solid #d8c57a;
+  background: #725e19;
+  color: #fff9de;
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.button:hover {
+  filter: brightness(1.1);
+}
+
+.over {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.menuOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(6, 14, 26, 0.9), rgba(12, 24, 40, 0.86));
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 20px;
+  gap: 10px;
+}
+
+.menuTitle {
+  margin: 0;
+  color: #ffe7a2;
+  font-size: clamp(26px, 5vw, 42px);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.menuText {
+  margin: 0;
+  color: #d8e4f4;
+}
+
+@media (max-width: 600px) {
+  .wrap {
+    padding: 12px;
+  }
+
+  .pill {
+    font-size: 13px;
+  }
+}

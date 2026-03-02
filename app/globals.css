@@ -1,0 +1,38 @@
+:root {
+  --bg-1: #101820;
+  --bg-2: #1f3a5a;
+  --panel: #203b5d;
+  --panel-edge: #89a6c8;
+  --ink: #f2f5f8;
+  --accent: #f9d35c;
+  --danger: #ff6b6b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100%;
+  font-family: "Trebuchet MS", "Verdana", sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 20% 10%, #304f74 0, transparent 42%),
+    radial-gradient(circle at 85% 90%, #36516f 0, transparent 40%),
+    linear-gradient(160deg, var(--bg-1), var(--bg-2));
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 24px 14px;
+}
+
+a {
+  color: inherit;
+}
