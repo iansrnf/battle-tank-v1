@@ -63,6 +63,23 @@
   line-height: 1.5;
 }
 
+.toggleRow {
+  margin-top: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #d8e4f4;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.toggleRow input {
+  width: 16px;
+  height: 16px;
+  accent-color: #d8c57a;
+}
+
 .buttonRow {
   margin-top: 12px;
   display: flex;

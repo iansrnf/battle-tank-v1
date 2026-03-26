@@ -5,7 +5,7 @@ import { BOSS_LEVEL, TOTAL_LEVELS } from "./game/config";
 import { useTankGame } from "./game/useTankGame";
 
 export default function Home() {
-  const { canvasRef, world, hud, resetGame, openMainMenu } = useTankGame();
+  const { canvasRef, world, hud, aiMode, resetGame, openMainMenu, toggleAiMode } = useTankGame();
   const { score, level, lives, enemyLeft, status, activePowerUps, showMenu, isTerminalStatus } = hud;
 
   return (
@@ -42,6 +42,11 @@ export default function Home() {
       </div>
 
       <div className={styles.controls}>Active Power Ups: {activePowerUps}</div>
+
+      <label className={styles.toggleRow}>
+        <input type="checkbox" checked={aiMode} onChange={toggleAiMode} />
+        <span>AI Mode: {aiMode ? "On" : "Off"}</span>
+      </label>
 
       <div className={styles.buttonRow}>
         <button type="button" className={styles.button} onClick={resetGame}>

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { WORLD } from "./config";
 import { drawGame } from "./render";
 import { getHudSnapshot, makeInitialState, startGameState, stepGame } from "./engine";
+import { getAiKeys } from "./ai";
 
 const BLOCKED_KEYS = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"]);
 
@@ -13,7 +14,9 @@ export function useTankGame() {
   const keysRef = useRef(new Set());
   const rafRef = useRef(null);
   const lastFrameRef = useRef(0);
+  const aiModeRef = useRef(false);
   const [hud, setHud] = useState(() => getHudSnapshot(stateRef.current));
+  const [aiMode, setAiMode] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -32,7 +35,8 @@ export function useTankGame() {
       const dt = Math.min((timestamp - lastFrameRef.current) / 1000, 0.05);
       lastFrameRef.current = timestamp;
 
-      stepGame(stateRef.current, keysRef.current, dt);
+      const inputKeys = aiModeRef.current ? getAiKeys(stateRef.current) : keysRef.current;
+      stepGame(stateRef.current, inputKeys, dt);
 
       const canvas = canvasRef.current;
       if (canvas) {
@@ -73,11 +77,22 @@ export function useTankGame() {
     syncHud();
   };
 
+  const toggleAiMode = () => {
+    keysRef.current.clear();
+    setAiMode((current) => {
+      const next = !current;
+      aiModeRef.current = next;
+      return next;
+    });
+  };
+
   return {
     canvasRef,
     world: WORLD,
     hud,
+    aiMode,
     resetGame,
     openMainMenu,
+    toggleAiMode,
   };
 }
