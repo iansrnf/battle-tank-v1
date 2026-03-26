@@ -12,7 +12,38 @@ export const DIR_VECTORS = {
 };
 
 export const TOTAL_LEVELS = 100;
-export const BOSS_LEVEL = 5;
+export const BOSS_INTERVAL = 5;
+
+const BOSS_ARCHETYPES = [
+  {
+    key: "fortress",
+    name: "Fortress",
+    color: "#ffd56b",
+    accent: "#ff8c42",
+    abilities: ["burst", "armor"],
+  },
+  {
+    key: "hunter",
+    name: "Hunter",
+    color: "#7ee0ff",
+    accent: "#1fb0ff",
+    abilities: ["dash", "aimed"],
+  },
+  {
+    key: "warlord",
+    name: "Warlord",
+    color: "#ff8aa8",
+    accent: "#ff4f7a",
+    abilities: ["summon", "burst"],
+  },
+  {
+    key: "storm",
+    name: "Storm Core",
+    color: "#c59bff",
+    accent: "#7f6cff",
+    abilities: ["radial", "aimed"],
+  },
+];
 
 export const POWERUP_TYPES = ["shield", "rapidfire", "spread", "extraLife"];
 
@@ -40,16 +71,44 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
+export function isBossLevel(level) {
+  return level % BOSS_INTERVAL === 0;
+}
+
+function getBossTier(level) {
+  return Math.max(1, Math.floor(level / BOSS_INTERVAL));
+}
+
+function getBossArchetype(level) {
+  return BOSS_ARCHETYPES[(getBossTier(level) - 1) % BOSS_ARCHETYPES.length];
+}
+
 function makeLevelConfig(level) {
-  if (level === BOSS_LEVEL) {
+  if (isBossLevel(level)) {
+    const bossTier = getBossTier(level);
+    const archetype = getBossArchetype(level);
     return {
       label: `Level ${level} Boss`,
       boss: true,
-      score: 900,
+      bossTier,
+      bossProfile: {
+        ...archetype,
+        hp: 10 + bossTier * 5,
+        speed: Math.min(110 + bossTier * 8, 220),
+        size: Math.min(42 + bossTier, 58),
+        score: 900 + bossTier * 225,
+        shootMin: Math.max(0.22, 0.62 - bossTier * 0.02),
+        shootMax: Math.max(0.42, 0.95 - bossTier * 0.015),
+        armorCooldown: Math.max(0.18, 0.45 - bossTier * 0.015),
+        dashSpeed: Math.min(220 + bossTier * 10, 340),
+        summonHp: clamp(1 + Math.floor(bossTier / 4), 1, 4),
+      },
+      score: 900 + bossTier * 225,
     };
   }
 
-  const regularIndex = level > BOSS_LEVEL ? level - 2 : level - 1;
+  const completedBosses = Math.floor((level - 1) / BOSS_INTERVAL);
+  const regularIndex = level - completedBosses - 1;
 
   return {
     label: `Level ${level}`,
@@ -157,7 +216,7 @@ export function getLevelBricks(level) {
   if (!levelBricksCache.has(normalizedLevel)) {
     levelBricksCache.set(
       normalizedLevel,
-      normalizedLevel === BOSS_LEVEL ? makeBossArena(normalizedLevel) : makeRegularArena(normalizedLevel)
+      isBossLevel(normalizedLevel) ? makeBossArena(normalizedLevel) : makeRegularArena(normalizedLevel)
     );
   }
   return levelBricksCache.get(normalizedLevel);

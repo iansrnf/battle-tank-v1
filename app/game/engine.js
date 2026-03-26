@@ -27,25 +27,40 @@ function createId(prefix) {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+function getBossAimVector(enemy, player) {
+  const dx = player.x - enemy.x;
+  const dy = player.y - enemy.y;
+  const length = Math.hypot(dx, dy) || 1;
+  return { x: dx / length, y: dy / length };
+}
+
 export function buildEnemiesForLevel(level) {
   const cfg = getLevelConfig(level);
   if (!cfg) return [];
 
   if (cfg.boss) {
+    const profile = cfg.bossProfile;
     return [
       {
         id: `boss-${level}`,
         x: WORLD.width / 2,
         y: 88,
         dir: "down",
-        speed: 120,
+        speed: profile.speed,
         changeTimer: 0.55,
-        shootTimer: 0.45,
-        hp: 12,
+        shootTimer: profile.shootMin,
+        hp: profile.hp,
+        maxHp: profile.hp,
         score: cfg.score,
         isBoss: true,
         canDropPowerUp: true,
-        size: 44,
+        size: profile.size,
+        bossTier: cfg.bossTier,
+        bossProfile: profile,
+        dashTimer: 2.4,
+        armorTimer: 0,
+        summonTimer: 4.8,
+        burstCooldown: 0,
       },
     ];
   }
@@ -107,6 +122,7 @@ export function makeInitialState() {
       spread: 0,
     },
     explosions: [],
+    restartTimer: null,
   };
 }
 
@@ -127,6 +143,7 @@ export function summarizePowerUps(effects) {
 }
 
 export function getHudSnapshot(state) {
+  const boss = state.enemies.find((enemy) => enemy.isBoss);
   return {
     score: state.score,
     lives: state.lives,
@@ -136,7 +153,16 @@ export function getHudSnapshot(state) {
     status: state.status,
     showMenu: state.mode === "menu",
     isTerminalStatus: state.status === "Game Over" || state.status === "Victory",
+    bossName: boss?.bossProfile?.name ?? null,
+    bossHp: boss ? boss.hp : null,
+    bossMaxHp: boss?.maxHp ?? null,
+    restartTimer: state.restartTimer,
   };
+}
+
+function restartRun(state) {
+  const nextState = startGameState();
+  Object.assign(state, nextState);
 }
 
 function validTankPosition(bricks, tankRect) {
@@ -181,6 +207,101 @@ function spawnVectorBullet(state, owner, x, y, vx, vy) {
   });
 }
 
+function spawnAimedBullet(state, owner, x, y, targetX, targetY, speedMultiplier = 1) {
+  const dx = targetX - x;
+  const dy = targetY - y;
+  const length = Math.hypot(dx, dy) || 1;
+  state.bullets.push({
+    id: createId(owner),
+    owner,
+    x,
+    y,
+    dir: "up",
+    vx: dx / length,
+    vy: dy / length,
+    speed: (owner === "player" ? 330 : 250) * speedMultiplier,
+    size: 6,
+  });
+}
+
+function spawnRadialBurst(state, enemy, projectiles) {
+  for (let index = 0; index < projectiles; index += 1) {
+    const angle = (Math.PI * 2 * index) / projectiles;
+    spawnVectorBullet(state, "enemy", enemy.x, enemy.y, Math.cos(angle), Math.sin(angle));
+  }
+}
+
+function spawnBurstShot(state, enemy, targetVector) {
+  const spread = 0.32;
+  const center = targetVector ?? DIR_VECTORS[enemy.dir];
+  const vectors = [
+    center,
+    {
+      x: center.x * Math.cos(spread) - center.y * Math.sin(spread),
+      y: center.x * Math.sin(spread) + center.y * Math.cos(spread),
+    },
+    {
+      x: center.x * Math.cos(-spread) - center.y * Math.sin(-spread),
+      y: center.x * Math.sin(-spread) + center.y * Math.cos(-spread),
+    },
+  ];
+
+  for (const vector of vectors) {
+    spawnVectorBullet(state, "enemy", enemy.x, enemy.y, vector.x, vector.y);
+  }
+}
+
+function spawnBossMinion(state, boss) {
+  const offset = Math.random() > 0.5 ? -64 : 64;
+  state.enemies.push({
+    id: createId(`minion-${boss.bossTier}`),
+    x: clamp(boss.x + offset, 44, WORLD.width - 44),
+    y: clamp(boss.y + 56, 52, WORLD.height / 2),
+    dir: "down",
+    speed: 120 + boss.bossTier * 4,
+    changeTimer: 0.45,
+    shootTimer: 1.3,
+    hp: boss.bossProfile.summonHp,
+    score: Math.max(100, Math.floor(boss.score * 0.2)),
+    canDropPowerUp: false,
+    size: 26,
+  });
+}
+
+function updateBossBehavior(state, enemy, player, dt) {
+  const profile = enemy.bossProfile;
+  const aim = getBossAimVector(enemy, player);
+
+  enemy.armorTimer = Math.max(0, enemy.armorTimer - dt);
+  enemy.dashTimer -= dt;
+  enemy.summonTimer -= dt;
+
+  if (profile.abilities.includes("dash") && enemy.dashTimer <= 0) {
+    enemy.dir = Math.abs(aim.x) > Math.abs(aim.y) ? (aim.x < 0 ? "left" : "right") : aim.y < 0 ? "up" : "down";
+    const dashDistance = profile.dashSpeed * dt;
+    const nextRect = rectFromTank({
+      ...enemy,
+      x: enemy.x + aim.x * dashDistance,
+      y: enemy.y + aim.y * dashDistance,
+    });
+    if (validTankPosition(state.bricks, nextRect)) {
+      enemy.x += aim.x * dashDistance;
+      enemy.y += aim.y * dashDistance;
+    }
+    enemy.dashTimer = Math.max(1.1, 2.8 - enemy.bossTier * 0.08);
+  }
+
+  if (profile.abilities.includes("summon") && enemy.summonTimer <= 0) {
+    const activeMinions = state.enemies.filter((candidate) => !candidate.isBoss).length;
+    if (activeMinions < 4) {
+      spawnBossMinion(state, enemy);
+    }
+    enemy.summonTimer = Math.max(2.8, 5 - enemy.bossTier * 0.08);
+  }
+
+  return aim;
+}
+
 function spawnPowerUp(state, x, y) {
   const type = POWERUP_TYPES[Math.floor(Math.random() * POWERUP_TYPES.length)];
   state.powerUps.push({
@@ -200,7 +321,17 @@ function resetPlayerPosition(player) {
 }
 
 export function stepGame(state, keys, dt) {
-  if (!state.running || state.mode !== "play") return;
+  if (state.mode !== "play") return;
+
+  if (!state.running) {
+    if (!state.won && state.restartTimer != null) {
+      state.restartTimer = Math.max(0, state.restartTimer - dt);
+      if (state.restartTimer <= 0) {
+        restartRun(state);
+      }
+    }
+    return;
+  }
 
   const player = state.player;
   player.shootCd = Math.max(0, player.shootCd - dt);
@@ -294,10 +425,33 @@ export function stepGame(state, keys, dt) {
       enemy.dir = randomDir();
     }
 
+    if (enemy.isBoss) {
+      updateBossBehavior(state, enemy, player, dt);
+    }
+
     if (enemy.shootTimer <= 0) {
       const muzzle = (enemy.size ?? WORLD.tankSize) / 2 + 6;
-      spawnBullet(state, "enemy", enemy.x + vector.x * muzzle, enemy.y + vector.y * muzzle, enemy.dir);
-      enemy.shootTimer = enemy.isBoss ? 0.35 + Math.random() * 0.35 : 0.9 + Math.random() * 1.4;
+
+      if (enemy.isBoss) {
+        const aim = getBossAimVector(enemy, player);
+        const originX = enemy.x + aim.x * muzzle;
+        const originY = enemy.y + aim.y * muzzle;
+
+        if (enemy.bossProfile.abilities.includes("radial")) {
+          spawnRadialBurst(state, enemy, Math.min(12, 6 + enemy.bossTier));
+        } else if (enemy.bossProfile.abilities.includes("burst")) {
+          spawnBurstShot(state, enemy, aim);
+        } else if (enemy.bossProfile.abilities.includes("aimed")) {
+          spawnAimedBullet(state, "enemy", originX, originY, player.x, player.y, 1 + enemy.bossTier * 0.03);
+        } else {
+          spawnBullet(state, "enemy", enemy.x + vector.x * muzzle, enemy.y + vector.y * muzzle, enemy.dir);
+        }
+
+        enemy.shootTimer = enemy.bossProfile.shootMin + Math.random() * (enemy.bossProfile.shootMax - enemy.bossProfile.shootMin);
+      } else {
+        spawnBullet(state, "enemy", enemy.x + vector.x * muzzle, enemy.y + vector.y * muzzle, enemy.dir);
+        enemy.shootTimer = 0.9 + Math.random() * 1.4;
+      }
     }
   }
 
@@ -324,10 +478,14 @@ export function stepGame(state, keys, dt) {
       for (const enemy of state.enemies) {
         if (!hit(bulletRect, rectFromTank(enemy))) continue;
 
-        enemy.hp -= 1;
+        const damage = enemy.isBoss && enemy.bossProfile?.abilities.includes("armor") && enemy.armorTimer > 0 ? 0.35 : 1;
+        enemy.hp -= damage;
         consumed = true;
         state.score += enemy.score ?? 100;
         state.explosions.push({ x: enemy.x, y: enemy.y, t: 0.18 });
+        if (enemy.isBoss && enemy.bossProfile?.abilities.includes("armor")) {
+          enemy.armorTimer = enemy.bossProfile.armorCooldown;
+        }
         if (enemy.hp <= 0 && enemy.canDropPowerUp) {
           spawnPowerUp(state, enemy.x, enemy.y);
         }
@@ -387,6 +545,7 @@ export function stepGame(state, keys, dt) {
     state.running = false;
     state.won = false;
     state.status = "Game Over";
+    state.restartTimer = 3;
     return;
   }
 
@@ -396,6 +555,7 @@ export function stepGame(state, keys, dt) {
     state.running = false;
     state.won = true;
     state.status = "Victory";
+    state.restartTimer = null;
     return;
   }
 
@@ -404,6 +564,7 @@ export function stepGame(state, keys, dt) {
   state.bricks = getLevelBricks(state.level);
   state.bullets = [];
   state.powerUps = [];
+  state.restartTimer = null;
   resetPlayerPosition(player);
   player.invincible = 1.1;
 

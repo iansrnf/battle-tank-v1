@@ -1,7 +1,7 @@
 "use client";
 
 import styles from "./page.module.css";
-import { BOSS_LEVEL, TOTAL_LEVELS } from "./game/config";
+import { BOSS_INTERVAL, TOTAL_LEVELS } from "./game/config";
 import { useTankGame } from "./game/useTankGame";
 import { useTwitchChat } from "./game/useTwitchChat";
 
@@ -30,7 +30,7 @@ export default function Home() {
             <h2 className={styles.menuTitle}>Main Menu</h2>
             <p className={styles.menuText}>Battle Tank Classic</p>
             <p className={styles.menuText}>
-              {TOTAL_LEVELS} random levels, boss fight at level {BOSS_LEVEL}, and power-ups.
+              {TOTAL_LEVELS} random levels, boss fights every {BOSS_INTERVAL} levels, and power-ups.
             </p>
             <button type="button" className={styles.button} onClick={resetGame}>
               Start Game

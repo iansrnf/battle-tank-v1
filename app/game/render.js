@@ -112,6 +112,28 @@ export function drawGame(ctx, state) {
     }
   }
 
+  const activeBoss = state.enemies.find((enemy) => enemy.isBoss);
+  if (activeBoss) {
+    const ratio = Math.max(0, Math.min(1, activeBoss.hp / activeBoss.maxHp));
+    const barWidth = 260;
+    const barHeight = 18;
+    const barX = WORLD.width / 2 - barWidth / 2;
+    const barY = WORLD.height - 34;
+    ctx.fillStyle = "rgba(5, 10, 18, 0.78)";
+    ctx.fillRect(barX - 8, barY - 22, barWidth + 16, 34);
+    ctx.fillStyle = "#f6db88";
+    ctx.font = "bold 14px Verdana";
+    ctx.textAlign = "center";
+    ctx.fillText(`${activeBoss.bossProfile.name} - HP ${Math.ceil(activeBoss.hp)}/${activeBoss.maxHp}`, WORLD.width / 2, barY - 6);
+    ctx.fillStyle = "#28151b";
+    ctx.fillRect(barX, barY, barWidth, barHeight);
+    ctx.fillStyle = activeBoss.bossProfile.accent || "#ff8c42";
+    ctx.fillRect(barX, barY, barWidth * ratio, barHeight);
+    ctx.strokeStyle = "#ffe9aa";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(barX + 0.5, barY + 0.5, barWidth - 1, barHeight - 1);
+  }
+
   if (state.running) return;
 
   ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
@@ -120,4 +142,10 @@ export function drawGame(ctx, state) {
   ctx.font = "bold 48px Verdana";
   ctx.textAlign = "center";
   ctx.fillText(state.won ? "YOU WIN" : "GAME OVER", WORLD.width / 2, WORLD.height / 2);
+
+  if (!state.won && state.restartTimer != null) {
+    ctx.fillStyle = "#f7e49c";
+    ctx.font = "bold 22px Verdana";
+    ctx.fillText(`Retrying in ${Math.ceil(state.restartTimer)}...`, WORLD.width / 2, WORLD.height / 2 + 44);
+  }
 }
