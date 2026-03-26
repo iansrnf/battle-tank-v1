@@ -116,6 +116,10 @@ export function buildEnemiesForLevel(level) {
   return enemies;
 }
 
+function createLevelBricks(level) {
+  return getLevelBricks(level).map((brick) => ({ ...brick }));
+}
+
 export function makeInitialState() {
   const level = 1;
 
@@ -128,7 +132,7 @@ export function makeInitialState() {
     lives: 3,
     level,
     maxLevel: TOTAL_LEVELS,
-    bricks: getLevelBricks(level),
+    bricks: createLevelBricks(level),
     player: {
       x: WORLD.width / 2,
       y: WORLD.height - 70,
@@ -562,12 +566,7 @@ export function stepGame(state, keys, dt) {
   }
 
   state.bullets = state.bullets.filter((bullet) => {
-    if (bullet.x < 0 || bullet.y < 0 || bullet.x > WORLD.width || bullet.y > WORLD.height) {
-      return false;
-    }
-
-    const bulletRect = { x: bullet.x - bullet.size / 2, y: bullet.y - bullet.size / 2, w: bullet.size, h: bullet.size };
-    return !state.bricks.some((wall) => hit(bulletRect, wall));
+    return !(bullet.x < 0 || bullet.y < 0 || bullet.x > WORLD.width || bullet.y > WORLD.height);
   });
 
   const remainingBullets = [];
@@ -575,7 +574,17 @@ export function stepGame(state, keys, dt) {
     const bulletRect = { x: bullet.x - bullet.size / 2, y: bullet.y - bullet.size / 2, w: bullet.size, h: bullet.size };
     let consumed = false;
 
-    if (bullet.owner === "player") {
+    const wallIndex = state.bricks.findIndex((wall) => hit(bulletRect, wall));
+    if (wallIndex >= 0) {
+      consumed = true;
+      const wall = state.bricks[wallIndex];
+      if (wall.destructible) {
+        state.bricks.splice(wallIndex, 1);
+        state.explosions.push({ x: wall.x + wall.w / 2, y: wall.y + wall.h / 2, t: 0.1 });
+      }
+    }
+
+    if (!consumed && bullet.owner === "player") {
       for (const enemy of state.enemies) {
         if (!hit(bulletRect, rectFromTank(enemy))) continue;
 
@@ -661,7 +670,7 @@ export function stepGame(state, keys, dt) {
 
   state.level += 1;
   state.enemies = buildEnemiesForLevel(state.level);
-  state.bricks = getLevelBricks(state.level);
+  state.bricks = createLevelBricks(state.level);
   state.bullets = [];
   state.powerUps = [];
   state.restartTimer = null;

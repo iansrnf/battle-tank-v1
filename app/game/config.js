@@ -13,6 +13,7 @@ export const DIR_VECTORS = {
 
 export const TOTAL_LEVELS = 100;
 export const BOSS_INTERVAL = 5;
+const DESTRUCTIBLE_BRICK_SIZE = 16;
 
 const BOSS_ARCHETYPES = [
   {
@@ -126,15 +127,15 @@ function makeLevelConfig(level) {
 function makeBossArena(level) {
   const rand = makeSeededRandom(level * 97);
   const arena = [
-    { x: 224, y: 160, w: 128, h: 32 },
-    { x: 480, y: 160, w: 128, h: 32 },
-    { x: 288, y: 272, w: 256, h: 32 },
-    { x: 160, y: 416, w: 160, h: 32 },
-    { x: 512, y: 416, w: 160, h: 32 },
+    { x: 224, y: 160, w: 128, h: 32, destructible: false },
+    { x: 480, y: 160, w: 128, h: 32, destructible: false },
+    { x: 288, y: 272, w: 256, h: 32, destructible: true },
+    { x: 160, y: 416, w: 160, h: 32, destructible: true },
+    { x: 512, y: 416, w: 160, h: 32, destructible: true },
   ];
 
   if (rand() > 0.5) {
-    arena.push({ x: 384, y: 96, w: 64, h: 32 });
+    arena.push({ x: 384, y: 96, w: 64, h: 32, destructible: true });
   }
 
   return arena;
@@ -172,10 +173,11 @@ function makeRegularArena(level) {
     attempts += 1;
     const width = rand() > 0.55 ? 96 : 128;
     const height = rand() > 0.7 ? 64 : 32;
+    const destructible = rand() > 0.48;
     const x = Math.round((leftLimit + rand() * (leftCenterMax - leftLimit - width)) / 32) * 32;
     const y = Math.round((topLimit + rand() * (bottomLimit - topLimit - height)) / 32) * 32;
-    const leftWall = { x, y, w: width, h: height };
-    const rightWall = { x: WORLD.width - x - width, y, w: width, h: height };
+    const leftWall = { x, y, w: width, h: height, destructible };
+    const rightWall = { x: WORLD.width - x - width, y, w: width, h: height, destructible };
 
     if (spawnSafeZones.some((zone) => overlaps(leftWall, [zone], 0) || overlaps(rightWall, [zone], 0))) {
       continue;
@@ -194,6 +196,7 @@ function makeRegularArena(level) {
       y: 192 + Math.round(rand() * 7) * 32,
       w: 128,
       h: rand() > 0.5 ? 32 : 64,
+      destructible: rand() > 0.35,
     };
 
     if (!spawnSafeZones.some((zone) => overlaps(centerWall, [zone], 0)) && !overlaps(centerWall, walls)) {
@@ -202,6 +205,34 @@ function makeRegularArena(level) {
   }
 
   return walls.sort((a, b) => a.y - b.y || a.x - b.x);
+}
+
+function expandWallSegments(walls) {
+  const segments = [];
+
+  for (const wall of walls) {
+    if (!wall.destructible) {
+      segments.push({
+        ...wall,
+        destructible: false,
+      });
+      continue;
+    }
+
+    for (let offsetY = 0; offsetY < wall.h; offsetY += DESTRUCTIBLE_BRICK_SIZE) {
+      for (let offsetX = 0; offsetX < wall.w; offsetX += DESTRUCTIBLE_BRICK_SIZE) {
+        segments.push({
+          x: wall.x + offsetX,
+          y: wall.y + offsetY,
+          w: DESTRUCTIBLE_BRICK_SIZE,
+          h: DESTRUCTIBLE_BRICK_SIZE,
+          destructible: true,
+        });
+      }
+    }
+  }
+
+  return segments.sort((a, b) => a.y - b.y || a.x - b.x);
 }
 
 export function getLevelConfig(level) {
@@ -217,7 +248,7 @@ export function getLevelBricks(level) {
   if (!levelBricksCache.has(normalizedLevel)) {
     levelBricksCache.set(
       normalizedLevel,
-      isBossLevel(normalizedLevel) ? makeBossArena(normalizedLevel) : makeRegularArena(normalizedLevel)
+      expandWallSegments(isBossLevel(normalizedLevel) ? makeBossArena(normalizedLevel) : makeRegularArena(normalizedLevel))
     );
   }
   return levelBricksCache.get(normalizedLevel);

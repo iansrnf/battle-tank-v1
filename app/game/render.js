@@ -97,9 +97,24 @@ export function drawGame(ctx, state) {
 
   ctx.fillStyle = "#8e6038";
   for (const wall of state.bricks) {
-    ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
-    ctx.strokeStyle = "#51351e";
-    ctx.strokeRect(wall.x + 0.5, wall.y + 0.5, wall.w - 1, wall.h - 1);
+    if (wall.destructible) {
+      ctx.fillStyle = "#b46d43";
+      ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
+      ctx.strokeStyle = "#6a3f24";
+      ctx.strokeRect(wall.x + 0.5, wall.y + 0.5, wall.w - 1, wall.h - 1);
+      ctx.strokeStyle = "rgba(245, 210, 165, 0.35)";
+      ctx.beginPath();
+      ctx.moveTo(wall.x + 2, wall.y + wall.h / 2);
+      ctx.lineTo(wall.x + wall.w - 2, wall.y + wall.h / 2);
+      ctx.moveTo(wall.x + wall.w / 2, wall.y + 2);
+      ctx.lineTo(wall.x + wall.w / 2, wall.y + wall.h - 2);
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = "#8e6038";
+      ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
+      ctx.strokeStyle = "#51351e";
+      ctx.strokeRect(wall.x + 0.5, wall.y + 0.5, wall.w - 1, wall.h - 1);
+    }
   }
 
   drawTank(
