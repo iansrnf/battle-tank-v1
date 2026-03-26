@@ -173,6 +173,16 @@
   border-color: #d9a8ff;
 }
 
+.statusChatImmune {
+  color: #ffcf8d;
+  border-color: #ffcf8d;
+}
+
+.statusChatCommand {
+  color: #ff8f9f;
+  border-color: #ff8f9f;
+}
+
 .panelToggle {
   border: 2px solid #9fb7d3;
   background: #18344f;

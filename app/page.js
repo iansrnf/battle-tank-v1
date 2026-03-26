@@ -1,17 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "./page.module.css";
 import { BOSS_INTERVAL, TOTAL_LEVELS } from "./game/config";
 import { useTankGame } from "./game/useTankGame";
 import { useTwitchChat } from "./game/useTwitchChat";
 
 export default function Home() {
-  const { canvasRef, world, hud, aiMode, grantPower, dropRandomPower, goToLevel, resetGame, openMainMenu, toggleAiMode } = useTankGame();
+  const { canvasRef, world, hud, aiMode, grantPower, dropRandomPower, goToLevel, triggerChatCommand, triggerSupporterBoost, resetGame, openMainMenu, toggleAiMode } =
+    useTankGame();
   const chatMessages = useTwitchChat();
   const [panelOpen, setPanelOpen] = useState(false);
   const [thankYouAlert, setThankYouAlert] = useState(null);
   const [jumpLevelInput, setJumpLevelInput] = useState("1");
+  const processedSupportAlertRef = useRef(null);
+  const processedChatCommandRef = useRef(null);
   const {
     score,
     level,
@@ -30,9 +33,19 @@ export default function Home() {
     freezeTime,
     freezeRecoveryTime,
     scareTime,
+    chatImmunityTime,
+    chatCommand,
+    chatCommandTime,
   } = hud;
   const latestAlert = useMemo(
     () => [...chatMessages].reverse().find((message) => message.kind === "alert" && message.actor && message.thankAction),
+    [chatMessages]
+  );
+  const latestChatCommand = useMemo(
+    () =>
+      [...chatMessages]
+        .reverse()
+        .find((message) => message.kind === "chat" && /^!(zigzag|spin|lol)\b/i.test(message.text || "")),
     [chatMessages]
   );
 
@@ -48,6 +61,40 @@ export default function Home() {
       window.clearTimeout(timeout);
     };
   }, [latestAlert]);
+
+  useEffect(() => {
+    if (!thankYouAlert) return;
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+
+    const utterance = new SpeechSynthesisUtterance(
+      `Thank you ${thankYouAlert.actor} for ${thankYouAlert.thankAction}${thankYouAlert.thankDetail ? ` ${thankYouAlert.thankDetail}` : ""}`
+    );
+    utterance.rate = 1;
+    utterance.pitch = 1.05;
+    utterance.volume = 0.95;
+
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+
+    return () => {
+      window.speechSynthesis.cancel();
+    };
+  }, [thankYouAlert]);
+
+  useEffect(() => {
+    if (!latestAlert) return;
+    if (processedSupportAlertRef.current === latestAlert.id) return;
+    processedSupportAlertRef.current = latestAlert.id;
+    if (latestAlert.alertType === "tip" || latestAlert.alertType === "bits") triggerSupporterBoost();
+  }, [latestAlert, triggerSupporterBoost]);
+
+  useEffect(() => {
+    if (!latestChatCommand) return;
+    if (processedChatCommandRef.current === latestChatCommand.id) return;
+    processedChatCommandRef.current = latestChatCommand.id;
+    const match = latestChatCommand.text.match(/^!(zigzag|spin|lol)\b/i);
+    if (match) triggerChatCommand(match[1].toLowerCase());
+  }, [latestChatCommand, triggerChatCommand]);
 
   const thankYouText = thankYouAlert
     ? `Thank you ${thankYouAlert.actor} for ${thankYouAlert.thankAction}${thankYouAlert.thankDetail ? ` ${thankYouAlert.thankDetail}` : ""}`
@@ -68,6 +115,12 @@ export default function Home() {
     activeStatuses.push({ label: `Freeze Recover: ${Math.ceil(freezeRecoveryTime)}s`, colorClass: styles.statusFreeze });
   }
   if (scareTime > 0) activeStatuses.push({ label: `Scare: ${Math.ceil(scareTime)}s`, colorClass: styles.statusScare });
+  if (chatImmunityTime > 0) {
+    activeStatuses.push({ label: `Chat Immune: ${Math.ceil(chatImmunityTime)}s`, colorClass: styles.statusChatImmune });
+  }
+  if (chatCommandTime > 0 && chatCommand) {
+    activeStatuses.push({ label: `Chat ${chatCommand.toUpperCase()}: ${Math.ceil(chatCommandTime)}s`, colorClass: styles.statusChatCommand });
+  }
 
   return (
     <main className={styles.wrap}>

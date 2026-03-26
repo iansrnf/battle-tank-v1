@@ -21,6 +21,12 @@ const BOSS_DASH_DISTANCE = 150;
 const MAX_ACTIVE_REGULAR_ENEMIES = 8;
 const FREEZE_RECOVERY_TIME = 3;
 const SCARE_DURATION = 5;
+const SUPPORTER_ULTIMATE_SHIELD_BONUS = 120;
+const SUPPORTER_SPREAD_BONUS = 60;
+const SUPPORTER_CHAT_IMMUNITY_BONUS = 120;
+const SUPPORTER_FREEZE_BONUS = 20;
+const CHAT_COMMAND_DURATION = 3;
+const CHAT_SPIN_SPEED = 12;
 
 function getShieldStageDuration(shieldHp) {
   return NORMAL_SHIELD_STAGE_TIMERS[shieldHp] ?? 0;
@@ -187,6 +193,12 @@ export function makeInitialState() {
       freeze: 0,
       freezeRecovery: 0,
       scare: 0,
+      chatImmunity: 0,
+      chatCommand: "",
+      chatCommandTime: 0,
+      chatCommandPhase: 0,
+      chatCommandMoveTimer: 0,
+      chatCommandMoveDir: "up",
     },
     explosions: [],
     restartTimer: null,
@@ -216,6 +228,10 @@ export function summarizePowerUps(state) {
   if (state.effects.freeze > 0) buffs.push(`Freeze ${Math.ceil(state.effects.freeze)}s`);
   else if (state.effects.freezeRecovery > 0) buffs.push(`Freeze Recovery ${Math.ceil(state.effects.freezeRecovery)}s`);
   if (state.effects.scare > 0) buffs.push(`Scare ${Math.ceil(state.effects.scare)}s`);
+  if (state.effects.chatImmunity > 0) buffs.push(`Chat Immune ${Math.ceil(state.effects.chatImmunity)}s`);
+  if (state.effects.chatCommandTime > 0 && state.effects.chatCommand) {
+    buffs.push(`${state.effects.chatCommand.toUpperCase()} ${Math.ceil(state.effects.chatCommandTime)}s`);
+  }
   return buffs.length ? buffs.join(" | ") : "None";
 }
 
@@ -243,6 +259,9 @@ export function getHudSnapshot(state) {
     freezeTime: state.effects.freeze ?? 0,
     freezeRecoveryTime: state.effects.freezeRecovery ?? 0,
     scareTime: state.effects.scare ?? 0,
+    chatImmunityTime: state.effects.chatImmunity ?? 0,
+    chatCommand: state.effects.chatCommand ?? "",
+    chatCommandTime: state.effects.chatCommandTime ?? 0,
   };
 }
 
@@ -606,6 +625,30 @@ export function applyPowerUpToState(state, type) {
   }
 }
 
+export function applySupporterBoost(state) {
+  state.player.ultimateShieldTime += SUPPORTER_ULTIMATE_SHIELD_BONUS;
+  state.player.shieldHp = PLAYER_MAX_SHIELD_HP;
+  state.player.shieldTimer = 0;
+  state.effects.spread += SUPPORTER_SPREAD_BONUS;
+  state.effects.freeze += SUPPORTER_FREEZE_BONUS;
+  state.effects.freezeRecovery = 0;
+  state.effects.chatImmunity += SUPPORTER_CHAT_IMMUNITY_BONUS;
+}
+
+export function applyChatCommand(state, command) {
+  if ((state.effects.chatImmunity ?? 0) > 0) return false;
+
+  const normalized = String(command || "").trim().toLowerCase();
+  if (!["zigzag", "spin", "lol"].includes(normalized)) return false;
+
+  state.effects.chatCommand = normalized;
+  state.effects.chatCommandTime = CHAT_COMMAND_DURATION;
+  state.effects.chatCommandPhase = 0;
+  state.effects.chatCommandMoveTimer = 0;
+  state.effects.chatCommandMoveDir = randomDir();
+  return true;
+}
+
 export function jumpToLevel(state, targetLevel) {
   const level = clamp(Math.floor(targetLevel || 1), 1, TOTAL_LEVELS);
   const { enemies, enemyQueue } = initializeLevelEnemies(level);
@@ -645,6 +688,17 @@ export function stepGame(state, keys, dt) {
   state.effects.rapidfire = Math.max(0, state.effects.rapidfire - dt);
   state.effects.spread = Math.max(0, state.effects.spread - dt);
   state.effects.scare = Math.max(0, state.effects.scare - dt);
+  state.effects.chatImmunity = Math.max(0, state.effects.chatImmunity - dt);
+  if (state.effects.chatCommandTime > 0) {
+    state.effects.chatCommandTime = Math.max(0, state.effects.chatCommandTime - dt);
+    state.effects.chatCommandPhase += dt;
+    state.effects.chatCommandMoveTimer = Math.max(0, state.effects.chatCommandMoveTimer - dt);
+    if (state.effects.chatCommandTime <= 0) {
+      state.effects.chatCommand = "";
+      state.effects.chatCommandPhase = 0;
+      state.effects.chatCommandMoveTimer = 0;
+    }
+  }
   if (state.effects.freeze > 0) {
     state.effects.freeze = Math.max(0, state.effects.freeze - dt);
     if (state.effects.freeze <= 0) {
@@ -693,6 +747,32 @@ export function stepGame(state, keys, dt) {
   if (keys.has("ArrowRight") || keys.has("KeyD")) {
     moveX += 1;
     player.dir = "right";
+  }
+
+  if (state.effects.chatCommandTime > 0 && state.effects.chatCommand) {
+    const command = state.effects.chatCommand;
+
+    if (command === "zigzag") {
+      const wave = Math.sin(state.effects.chatCommandPhase * 10);
+      moveX = wave >= 0 ? 1 : -1;
+      moveY = -0.45;
+      player.dir = Math.abs(moveX) > Math.abs(moveY) ? (moveX < 0 ? "left" : "right") : moveY < 0 ? "up" : "down";
+    } else if (command === "spin") {
+      const spinIndex = Math.floor(state.effects.chatCommandPhase * CHAT_SPIN_SPEED) % 4;
+      player.dir = ["up", "right", "down", "left"][spinIndex];
+      moveX = 0;
+      moveY = 0;
+    } else if (command === "lol") {
+      if (state.effects.chatCommandMoveTimer <= 0) {
+        state.effects.chatCommandMoveDir = randomDir();
+        state.effects.chatCommandMoveTimer = 0.22;
+      }
+      const spinIndex = Math.floor(state.effects.chatCommandPhase * CHAT_SPIN_SPEED) % 4;
+      player.dir = ["up", "right", "down", "left"][spinIndex];
+      const chaosVector = DIR_VECTORS[state.effects.chatCommandMoveDir] ?? DIR_VECTORS.up;
+      moveX = chaosVector.x;
+      moveY = chaosVector.y;
+    }
   }
 
   if (moveX !== 0 || moveY !== 0) {
