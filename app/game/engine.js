@@ -1,4 +1,4 @@
-import { DIR_VECTORS, LEVELS, LEVEL_BRICKS, POWERUP_STYLE, POWERUP_TYPES, WORLD } from "./config";
+import { DIR_VECTORS, POWERUP_STYLE, POWERUP_TYPES, TOTAL_LEVELS, WORLD, getLevelBricks, getLevelConfig } from "./config";
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -27,12 +27,8 @@ function createId(prefix) {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-export function getLevelBricks(level) {
-  return LEVEL_BRICKS[level - 1] ?? LEVEL_BRICKS[LEVEL_BRICKS.length - 1];
-}
-
 export function buildEnemiesForLevel(level) {
-  const cfg = LEVELS[level - 1];
+  const cfg = getLevelConfig(level);
   if (!cfg) return [];
 
   if (cfg.boss) {
@@ -92,7 +88,7 @@ export function makeInitialState() {
     score: 0,
     lives: 3,
     level,
-    maxLevel: LEVELS.length,
+    maxLevel: TOTAL_LEVELS,
     bricks: getLevelBricks(level),
     player: {
       x: WORLD.width / 2,
@@ -411,6 +407,6 @@ export function stepGame(state, keys, dt) {
   resetPlayerPosition(player);
   player.invincible = 1.1;
 
-  const nextLevel = LEVELS[state.level - 1];
+  const nextLevel = getLevelConfig(state.level);
   state.status = nextLevel?.boss ? `Level ${state.level}: Boss Fight` : `Level ${state.level}`;
 }

@@ -11,117 +11,8 @@ export const DIR_VECTORS = {
   right: { x: 1, y: 0 },
 };
 
-export const LEVEL_BRICKS = [
-  [
-    { x: 128, y: 128, w: 96, h: 32 },
-    { x: 608, y: 128, w: 96, h: 32 },
-    { x: 288, y: 224, w: 256, h: 32 },
-    { x: 96, y: 320, w: 128, h: 32 },
-    { x: 608, y: 320, w: 128, h: 32 },
-    { x: 256, y: 448, w: 64, h: 32 },
-    { x: 512, y: 448, w: 64, h: 32 },
-  ],
-  [
-    { x: 96, y: 160, w: 192, h: 32 },
-    { x: 544, y: 160, w: 192, h: 32 },
-    { x: 304, y: 96, w: 224, h: 32 },
-    { x: 304, y: 256, w: 224, h: 32 },
-    { x: 160, y: 384, w: 160, h: 32 },
-    { x: 512, y: 384, w: 160, h: 32 },
-  ],
-  [
-    { x: 192, y: 192, w: 96, h: 32 },
-    { x: 544, y: 192, w: 96, h: 32 },
-    { x: 320, y: 192, w: 192, h: 32 },
-    { x: 352, y: 320, w: 128, h: 32 },
-    { x: 224, y: 448, w: 128, h: 32 },
-    { x: 480, y: 448, w: 128, h: 32 },
-  ],
-  [
-    { x: 80, y: 128, w: 128, h: 32 },
-    { x: 304, y: 128, w: 224, h: 32 },
-    { x: 624, y: 128, w: 128, h: 32 },
-    { x: 208, y: 256, w: 96, h: 32 },
-    { x: 528, y: 256, w: 96, h: 32 },
-    { x: 80, y: 384, w: 224, h: 32 },
-    { x: 528, y: 384, w: 224, h: 32 },
-  ],
-  [
-    { x: 96, y: 96, w: 96, h: 32 },
-    { x: 640, y: 96, w: 96, h: 32 },
-    { x: 224, y: 176, w: 384, h: 32 },
-    { x: 96, y: 272, w: 192, h: 32 },
-    { x: 544, y: 272, w: 192, h: 32 },
-    { x: 320, y: 352, w: 192, h: 32 },
-    { x: 224, y: 464, w: 128, h: 32 },
-    { x: 480, y: 464, w: 128, h: 32 },
-  ],
-  [
-    { x: 160, y: 96, w: 96, h: 32 },
-    { x: 576, y: 96, w: 96, h: 32 },
-    { x: 96, y: 192, w: 640, h: 32 },
-    { x: 224, y: 304, w: 96, h: 32 },
-    { x: 512, y: 304, w: 96, h: 32 },
-    { x: 320, y: 400, w: 192, h: 32 },
-    { x: 96, y: 496, w: 192, h: 32 },
-    { x: 544, y: 496, w: 192, h: 32 },
-  ],
-  [
-    { x: 96, y: 128, w: 128, h: 32 },
-    { x: 608, y: 128, w: 128, h: 32 },
-    { x: 256, y: 128, w: 320, h: 32 },
-    { x: 160, y: 240, w: 128, h: 32 },
-    { x: 544, y: 240, w: 128, h: 32 },
-    { x: 320, y: 320, w: 192, h: 32 },
-    { x: 224, y: 432, w: 128, h: 32 },
-    { x: 480, y: 432, w: 128, h: 32 },
-  ],
-  [
-    { x: 80, y: 112, w: 192, h: 32 },
-    { x: 560, y: 112, w: 192, h: 32 },
-    { x: 336, y: 112, w: 160, h: 32 },
-    { x: 144, y: 224, w: 128, h: 32 },
-    { x: 560, y: 224, w: 128, h: 32 },
-    { x: 304, y: 288, w: 224, h: 32 },
-    { x: 80, y: 400, w: 224, h: 32 },
-    { x: 528, y: 400, w: 224, h: 32 },
-    { x: 336, y: 496, w: 160, h: 32 },
-  ],
-  [
-    { x: 96, y: 96, w: 640, h: 32 },
-    { x: 96, y: 208, w: 160, h: 32 },
-    { x: 576, y: 208, w: 160, h: 32 },
-    { x: 288, y: 256, w: 256, h: 32 },
-    { x: 96, y: 352, w: 256, h: 32 },
-    { x: 480, y: 352, w: 256, h: 32 },
-    { x: 288, y: 464, w: 256, h: 32 },
-  ],
-  [
-    { x: 64, y: 96, w: 160, h: 32 },
-    { x: 608, y: 96, w: 160, h: 32 },
-    { x: 256, y: 96, w: 320, h: 32 },
-    { x: 96, y: 208, w: 128, h: 32 },
-    { x: 608, y: 208, w: 128, h: 32 },
-    { x: 288, y: 224, w: 256, h: 32 },
-    { x: 160, y: 336, w: 160, h: 32 },
-    { x: 512, y: 336, w: 160, h: 32 },
-    { x: 320, y: 432, w: 192, h: 32 },
-    { x: 224, y: 528, w: 384, h: 32 },
-  ],
-];
-
-export const LEVELS = [
-  { label: "Level 1", count: 6, hp: 1, speedMin: 95, speedMax: 130, shootMin: 0.8, shootMax: 2.3, score: 100 },
-  { label: "Level 2", count: 8, hp: 1, speedMin: 115, speedMax: 150, shootMin: 0.7, shootMax: 1.9, score: 125 },
-  { label: "Level 3 Boss", boss: true, score: 500 },
-  { label: "Level 4", count: 10, hp: 2, speedMin: 120, speedMax: 165, shootMin: 0.65, shootMax: 1.6, score: 150 },
-  { label: "Level 5", count: 12, hp: 2, speedMin: 135, speedMax: 180, shootMin: 0.55, shootMax: 1.45, score: 175 },
-  { label: "Level 6", count: 12, hp: 2, speedMin: 145, speedMax: 195, shootMin: 0.5, shootMax: 1.25, score: 190 },
-  { label: "Level 7", count: 13, hp: 2, speedMin: 155, speedMax: 205, shootMin: 0.45, shootMax: 1.15, score: 205 },
-  { label: "Level 8", count: 14, hp: 3, speedMin: 160, speedMax: 210, shootMin: 0.42, shootMax: 1.05, score: 220 },
-  { label: "Level 9", count: 15, hp: 3, speedMin: 170, speedMax: 220, shootMin: 0.38, shootMax: 0.95, score: 240 },
-  { label: "Level 10", count: 16, hp: 3, speedMin: 180, speedMax: 230, shootMin: 0.35, shootMax: 0.9, score: 260 },
-];
+export const TOTAL_LEVELS = 100;
+export const BOSS_LEVEL = 5;
 
 export const POWERUP_TYPES = ["shield", "rapidfire", "spread", "extraLife"];
 
@@ -131,3 +22,143 @@ export const POWERUP_STYLE = {
   spread: { color: "#a8ff60", label: "P", duration: 12 },
   extraLife: { color: "#ff5f8f", label: "+1", duration: 0 },
 };
+
+const levelConfigCache = new Map();
+const levelBricksCache = new Map();
+
+function makeSeededRandom(seed) {
+  let value = seed % 2147483647;
+  if (value <= 0) value += 2147483646;
+
+  return () => {
+    value = (value * 16807) % 2147483647;
+    return (value - 1) / 2147483646;
+  };
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function makeLevelConfig(level) {
+  if (level === BOSS_LEVEL) {
+    return {
+      label: `Level ${level} Boss`,
+      boss: true,
+      score: 900,
+    };
+  }
+
+  const regularIndex = level > BOSS_LEVEL ? level - 2 : level - 1;
+
+  return {
+    label: `Level ${level}`,
+    count: clamp(6 + Math.floor(regularIndex * 0.75), 6, 24),
+    hp: clamp(1 + Math.floor(regularIndex / 12), 1, 6),
+    speedMin: Math.min(95 + regularIndex * 7, 320),
+    speedMax: Math.min(130 + regularIndex * 7.5, 360),
+    shootMin: Math.max(0.22, 0.8 - regularIndex * 0.012),
+    shootMax: Math.max(0.55, 2.3 - regularIndex * 0.02),
+    score: 100 + regularIndex * 18,
+  };
+}
+
+function makeBossArena(level) {
+  const rand = makeSeededRandom(level * 97);
+  const arena = [
+    { x: 224, y: 160, w: 128, h: 32 },
+    { x: 480, y: 160, w: 128, h: 32 },
+    { x: 288, y: 272, w: 256, h: 32 },
+    { x: 160, y: 416, w: 160, h: 32 },
+    { x: 512, y: 416, w: 160, h: 32 },
+  ];
+
+  if (rand() > 0.5) {
+    arena.push({ x: 384, y: 96, w: 64, h: 32 });
+  }
+
+  return arena;
+}
+
+function overlaps(rect, walls, gap = 20) {
+  return walls.some((wall) => {
+    return !(
+      rect.x + rect.w + gap <= wall.x ||
+      wall.x + wall.w + gap <= rect.x ||
+      rect.y + rect.h + gap <= wall.y ||
+      wall.y + wall.h + gap <= rect.y
+    );
+  });
+}
+
+function makeRegularArena(level) {
+  const rand = makeSeededRandom(level * 7919);
+  const walls = [];
+  const leftLimit = 64;
+  const rightLimit = WORLD.width - 64;
+  const topLimit = 96;
+  const bottomLimit = WORLD.height - 96;
+  const pairCount = 3 + Math.floor(rand() * 4) + Math.floor(level / 20);
+  const midlineChance = 0.35 + Math.min(0.25, level * 0.003);
+  const leftCenterMax = WORLD.width / 2 - 88;
+  const spawnSafeZones = [
+    { x: WORLD.width / 2 - 92, y: WORLD.height - 140, w: 184, h: 120 },
+    { x: 40, y: 24, w: WORLD.width - 80, h: 120 },
+  ];
+
+  let attempts = 0;
+  const maxAttempts = 120;
+  while (walls.length < pairCount * 2 && attempts < maxAttempts) {
+    attempts += 1;
+    const width = rand() > 0.55 ? 96 : 128;
+    const height = rand() > 0.7 ? 64 : 32;
+    const x = Math.round((leftLimit + rand() * (leftCenterMax - leftLimit - width)) / 32) * 32;
+    const y = Math.round((topLimit + rand() * (bottomLimit - topLimit - height)) / 32) * 32;
+    const leftWall = { x, y, w: width, h: height };
+    const rightWall = { x: WORLD.width - x - width, y, w: width, h: height };
+
+    if (spawnSafeZones.some((zone) => overlaps(leftWall, [zone], 0) || overlaps(rightWall, [zone], 0))) {
+      continue;
+    }
+
+    if (overlaps(leftWall, walls) || overlaps(rightWall, walls)) {
+      continue;
+    }
+
+    walls.push(leftWall, rightWall);
+  }
+
+  if (rand() < midlineChance) {
+    const centerWall = {
+      x: WORLD.width / 2 - 64,
+      y: 192 + Math.round(rand() * 7) * 32,
+      w: 128,
+      h: rand() > 0.5 ? 32 : 64,
+    };
+
+    if (!spawnSafeZones.some((zone) => overlaps(centerWall, [zone], 0)) && !overlaps(centerWall, walls)) {
+      walls.push(centerWall);
+    }
+  }
+
+  return walls.sort((a, b) => a.y - b.y || a.x - b.x);
+}
+
+export function getLevelConfig(level) {
+  const normalizedLevel = Math.max(1, Math.min(level, TOTAL_LEVELS));
+  if (!levelConfigCache.has(normalizedLevel)) {
+    levelConfigCache.set(normalizedLevel, makeLevelConfig(normalizedLevel));
+  }
+  return levelConfigCache.get(normalizedLevel);
+}
+
+export function getLevelBricks(level) {
+  const normalizedLevel = Math.max(1, Math.min(level, TOTAL_LEVELS));
+  if (!levelBricksCache.has(normalizedLevel)) {
+    levelBricksCache.set(
+      normalizedLevel,
+      normalizedLevel === BOSS_LEVEL ? makeBossArena(normalizedLevel) : makeRegularArena(normalizedLevel)
+    );
+  }
+  return levelBricksCache.get(normalizedLevel);
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import styles from "./page.module.css";
+import { BOSS_LEVEL, TOTAL_LEVELS } from "./game/config";
 import { useTankGame } from "./game/useTankGame";
 
 export default function Home() {
@@ -26,7 +27,9 @@ export default function Home() {
           <div className={styles.menuOverlay}>
             <h2 className={styles.menuTitle}>Main Menu</h2>
             <p className={styles.menuText}>Battle Tank Classic</p>
-            <p className={styles.menuText}>10 levels, boss fight at level 3, and power-ups.</p>
+            <p className={styles.menuText}>
+              {TOTAL_LEVELS} random levels, boss fight at level {BOSS_LEVEL}, and power-ups.
+            </p>
             <button type="button" className={styles.button} onClick={resetGame}>
               Start Game
             </button>
