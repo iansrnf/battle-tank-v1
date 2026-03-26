@@ -18,6 +18,7 @@ const BOSS_DASH_SPEED_BONUS = 10;
 const BOSS_DASH_TRAIL_INTERVAL = 0.04;
 const BOSS_DASH_TRAIL_TTL = 0.24;
 const BOSS_DASH_DISTANCE = 150;
+const MAX_ACTIVE_REGULAR_ENEMIES = 8;
 
 function getShieldStageDuration(shieldHp) {
   return NORMAL_SHIELD_STAGE_TIMERS[shieldHp] ?? 0;
@@ -128,14 +129,31 @@ export function buildEnemiesForLevel(level) {
   return enemies;
 }
 
+function initializeLevelEnemies(level) {
+  const levelEnemies = buildEnemiesForLevel(level);
+  const cfg = getLevelConfig(level);
+
+  if (cfg?.boss) {
+    return {
+      enemies: levelEnemies,
+      enemyQueue: [],
+    };
+  }
+
+  return {
+    enemies: [],
+    enemyQueue: levelEnemies,
+  };
+}
+
 function createLevelBricks(level) {
   return getLevelBricks(level).map((brick) => ({ ...brick }));
 }
 
 export function makeInitialState() {
   const level = 1;
-
-  return {
+  const { enemies, enemyQueue } = initializeLevelEnemies(level);
+  const initialState = {
     mode: "menu",
     running: true,
     won: false,
@@ -157,7 +175,8 @@ export function makeInitialState() {
       shieldTimer: 0,
       ultimateShieldTime: 0,
     },
-    enemies: buildEnemiesForLevel(level),
+    enemies,
+    enemyQueue,
     bullets: [],
     powerUps: [],
     effects: {
@@ -167,6 +186,9 @@ export function makeInitialState() {
     explosions: [],
     restartTimer: null,
   };
+
+  spawnQueuedEnemies(initialState);
+  return initialState;
 }
 
 export function startGameState() {
@@ -195,7 +217,7 @@ export function getHudSnapshot(state) {
     score: state.score,
     lives: state.lives,
     level: state.level,
-    enemyLeft: state.enemies.length,
+    enemyLeft: state.enemies.length + (state.enemyQueue?.length ?? 0),
     activePowerUps: summarizePowerUps(state),
     status: state.status,
     showMenu: state.mode === "menu",
@@ -226,6 +248,63 @@ function validTankPosition(bricks, tankRect) {
   }
 
   return true;
+}
+
+function canSpawnEnemyAt(state, enemy, x, y) {
+  const candidate = rectFromTank({
+    ...enemy,
+    x,
+    y,
+  });
+
+  if (!validTankPosition(state.bricks, candidate)) return false;
+  if (hit(candidate, rectFromTank(state.player))) return false;
+  if (state.enemies.some((activeEnemy) => hit(candidate, rectFromTank(activeEnemy)))) return false;
+
+  return !state.powerUps.some((powerUp) =>
+    hit(candidate, {
+      x: powerUp.x - powerUp.size / 2,
+      y: powerUp.y - powerUp.size / 2,
+      w: powerUp.size,
+      h: powerUp.size,
+    })
+  );
+}
+
+function spawnQueuedEnemies(state) {
+  if (!state.enemyQueue?.length) return;
+
+  const openSlots = MAX_ACTIVE_REGULAR_ENEMIES - state.enemies.length;
+  if (openSlots <= 0) return;
+
+  let spawned = 0;
+  while (spawned < openSlots && state.enemyQueue.length > 0) {
+    const enemy = state.enemyQueue[0];
+    let spawnX = null;
+    let spawnY = null;
+
+    for (let attempt = 0; attempt < 50; attempt += 1) {
+      const x = 36 + Math.random() * (WORLD.width - 72);
+      const y = 48 + Math.random() * (WORLD.height - 180);
+      if (!canSpawnEnemyAt(state, enemy, x, y)) continue;
+      spawnX = x;
+      spawnY = y;
+      break;
+    }
+
+    if (spawnX == null || spawnY == null) {
+      break;
+    }
+
+    state.enemyQueue.shift();
+    state.enemies.push({
+      ...enemy,
+      x: spawnX,
+      y: spawnY,
+      dir: randomDir(),
+    });
+    spawned += 1;
+  }
 }
 
 function spawnBullet(state, owner, x, y, dir) {
@@ -490,12 +569,14 @@ export function applyPowerUpToState(state, type) {
 
 export function jumpToLevel(state, targetLevel) {
   const level = clamp(Math.floor(targetLevel || 1), 1, TOTAL_LEVELS);
+  const { enemies, enemyQueue } = initializeLevelEnemies(level);
   state.level = level;
   state.running = true;
   state.won = false;
   state.mode = "play";
   state.status = getLevelConfig(level)?.boss ? `Level ${level}: Boss Fight` : `Level ${level}`;
-  state.enemies = buildEnemiesForLevel(level);
+  state.enemies = enemies;
+  state.enemyQueue = enemyQueue;
   state.bricks = createLevelBricks(level);
   state.bullets = [];
   state.powerUps = [];
@@ -503,6 +584,7 @@ export function jumpToLevel(state, targetLevel) {
   state.restartTimer = null;
   resetPlayerPosition(state.player);
   state.player.invincible = 1.1;
+  spawnQueuedEnemies(state);
 }
 
 export function stepGame(state, keys, dt) {
@@ -745,6 +827,7 @@ export function stepGame(state, keys, dt) {
   state.powerUps = remainingPowerUps;
 
   state.enemies = state.enemies.filter((enemy) => enemy.hp > 0);
+  spawnQueuedEnemies(state);
   state.explosions = state.explosions
     .map((explosion) => ({ ...explosion, t: explosion.t - dt }))
     .filter((explosion) => explosion.t > 0);
@@ -757,7 +840,7 @@ export function stepGame(state, keys, dt) {
     return;
   }
 
-  if (state.enemies.length > 0) return;
+  if (state.enemies.length > 0 || (state.enemyQueue?.length ?? 0) > 0) return;
 
   if (state.level >= state.maxLevel) {
     state.running = false;
@@ -768,13 +851,16 @@ export function stepGame(state, keys, dt) {
   }
 
   state.level += 1;
-  state.enemies = buildEnemiesForLevel(state.level);
+  const { enemies, enemyQueue } = initializeLevelEnemies(state.level);
+  state.enemies = enemies;
+  state.enemyQueue = enemyQueue;
   state.bricks = createLevelBricks(state.level);
   state.bullets = [];
   state.powerUps = [];
   state.restartTimer = null;
   resetPlayerPosition(player);
   player.invincible = 1.1;
+  spawnQueuedEnemies(state);
 
   const nextLevel = getLevelConfig(state.level);
   state.status = nextLevel?.boss ? `Level ${state.level}: Boss Fight` : `Level ${state.level}`;
