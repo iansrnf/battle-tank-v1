@@ -140,6 +140,26 @@
   gap: 8px;
 }
 
+.jumpRow {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.jumpInput {
+  border: 2px solid #9fb7d3;
+  background: #10253a;
+  color: #eef6ff;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-weight: 700;
+}
+
+.jumpInput::placeholder {
+  color: rgba(238, 246, 255, 0.55);
+}
+
 .controls {
   margin-top: 12px;
   color: #d8e4f4;

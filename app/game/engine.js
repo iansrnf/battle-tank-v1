@@ -12,6 +12,12 @@ const NORMAL_SHIELD_STAGE_TIMERS = {
 const ULTIMATE_SHIELD_BASE_TIME = 60;
 const ULTIMATE_SHIELD_INCREMENT = 30;
 const ULTIMATE_SHIELD_MAX_TIME = 120;
+const BOSS_DASH_COOLDOWN = 3;
+const BOSS_DASH_DURATION = 0.38;
+const BOSS_DASH_SPEED_BONUS = 10;
+const BOSS_DASH_TRAIL_INTERVAL = 0.04;
+const BOSS_DASH_TRAIL_TTL = 0.24;
+const BOSS_DASH_DISTANCE = 150;
 
 function getShieldStageDuration(shieldHp) {
   return NORMAL_SHIELD_STAGE_TIMERS[shieldHp] ?? 0;
@@ -82,7 +88,12 @@ export function buildEnemiesForLevel(level) {
         size: profile.size,
         bossTier: cfg.bossTier,
         bossProfile: profile,
-        dashTimer: 2.4,
+        dashTimer: BOSS_DASH_COOLDOWN,
+        dashDuration: 0,
+        dashDistanceLeft: 0,
+        dashVector: { x: 0, y: 1 },
+        dashTrail: [],
+        dashTrailTimer: 0,
         armorTimer: 0,
         summonTimer: 4.8,
         burstCooldown: 0,
@@ -315,20 +326,61 @@ function updateBossBehavior(state, enemy, player, dt) {
   enemy.armorTimer = Math.max(0, enemy.armorTimer - dt);
   enemy.dashTimer -= dt;
   enemy.summonTimer -= dt;
+  enemy.dashDuration = Math.max(0, (enemy.dashDuration ?? 0) - dt);
+  enemy.dashTrailTimer = Math.max(0, (enemy.dashTrailTimer ?? 0) - dt);
+  enemy.dashDistanceLeft = Math.max(0, enemy.dashDistanceLeft ?? 0);
+  enemy.dashTrail = (enemy.dashTrail ?? [])
+    .map((afterImage) => ({ ...afterImage, ttl: afterImage.ttl - dt }))
+    .filter((afterImage) => afterImage.ttl > 0);
 
   if (profile.abilities.includes("dash") && enemy.dashTimer <= 0) {
-    enemy.dir = Math.abs(aim.x) > Math.abs(aim.y) ? (aim.x < 0 ? "left" : "right") : aim.y < 0 ? "up" : "down";
-    const dashDistance = profile.dashSpeed * dt;
+    const dashAwayFromPlayer = state.level >= 10 && hasUltimateShield(player);
+    enemy.dashVector = dashAwayFromPlayer ? { x: -aim.x, y: -aim.y } : aim;
+    enemy.dashDuration = BOSS_DASH_DURATION;
+    enemy.dashDistanceLeft = BOSS_DASH_DISTANCE;
+    enemy.dashTrail = [];
+    enemy.dashTrailTimer = 0;
+    enemy.dashTimer = BOSS_DASH_COOLDOWN;
+  }
+
+  if (profile.abilities.includes("dash") && enemy.dashDuration > 0) {
+    const dashVector = enemy.dashVector ?? aim;
+    enemy.dir =
+      Math.abs(dashVector.x) > Math.abs(dashVector.y)
+        ? dashVector.x < 0
+          ? "left"
+          : "right"
+        : dashVector.y < 0
+          ? "up"
+          : "down";
+
+    if (enemy.dashTrailTimer <= 0) {
+      enemy.dashTrail.push({
+        x: enemy.x,
+        y: enemy.y,
+        dir: enemy.dir,
+        ttl: BOSS_DASH_TRAIL_TTL,
+      });
+      enemy.dashTrailTimer = BOSS_DASH_TRAIL_INTERVAL;
+    }
+
+    const dashDistance = Math.min(enemy.dashDistanceLeft, (profile.dashSpeed + BOSS_DASH_SPEED_BONUS) * dt);
     const nextRect = rectFromTank({
       ...enemy,
-      x: enemy.x + aim.x * dashDistance,
-      y: enemy.y + aim.y * dashDistance,
+      x: enemy.x + dashVector.x * dashDistance,
+      y: enemy.y + dashVector.y * dashDistance,
     });
     if (validTankPosition(state.bricks, nextRect)) {
-      enemy.x += aim.x * dashDistance;
-      enemy.y += aim.y * dashDistance;
+      enemy.x += dashVector.x * dashDistance;
+      enemy.y += dashVector.y * dashDistance;
+      enemy.dashDistanceLeft = Math.max(0, enemy.dashDistanceLeft - dashDistance);
+      if (enemy.dashDistanceLeft <= 0) {
+        enemy.dashDuration = 0;
+      }
+    } else {
+      enemy.dashDuration = 0;
+      enemy.dashDistanceLeft = 0;
     }
-    enemy.dashTimer = Math.max(1.1, 2.8 - enemy.bossTier * 0.08);
   }
 
   if (profile.abilities.includes("summon") && enemy.summonTimer <= 0) {
@@ -434,6 +486,23 @@ export function applyPowerUpToState(state, type) {
   if (type === "rapidfire" || type === "spread") {
     state.effects[type] += POWERUP_STYLE[type].duration;
   }
+}
+
+export function jumpToLevel(state, targetLevel) {
+  const level = clamp(Math.floor(targetLevel || 1), 1, TOTAL_LEVELS);
+  state.level = level;
+  state.running = true;
+  state.won = false;
+  state.mode = "play";
+  state.status = getLevelConfig(level)?.boss ? `Level ${level}: Boss Fight` : `Level ${level}`;
+  state.enemies = buildEnemiesForLevel(level);
+  state.bricks = createLevelBricks(level);
+  state.bullets = [];
+  state.powerUps = [];
+  state.explosions = [];
+  state.restartTimer = null;
+  resetPlayerPosition(state.player);
+  state.player.invincible = 1.1;
 }
 
 export function stepGame(state, keys, dt) {

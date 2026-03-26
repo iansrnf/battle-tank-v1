@@ -7,10 +7,11 @@ import { useTankGame } from "./game/useTankGame";
 import { useTwitchChat } from "./game/useTwitchChat";
 
 export default function Home() {
-  const { canvasRef, world, hud, aiMode, grantPower, dropRandomPower, resetGame, openMainMenu, toggleAiMode } = useTankGame();
+  const { canvasRef, world, hud, aiMode, grantPower, dropRandomPower, goToLevel, resetGame, openMainMenu, toggleAiMode } = useTankGame();
   const chatMessages = useTwitchChat();
   const [panelOpen, setPanelOpen] = useState(false);
   const [thankYouAlert, setThankYouAlert] = useState(null);
+  const [jumpLevelInput, setJumpLevelInput] = useState("1");
   const { score, level, lives, enemyLeft, status, activePowerUps, showMenu, isTerminalStatus } = hud;
   const latestAlert = useMemo(
     () => [...chatMessages].reverse().find((message) => message.kind === "alert" && message.actor && message.thankAction),
@@ -104,6 +105,24 @@ export default function Home() {
                 </button>
                 <button type="button" className={styles.button} onClick={dropRandomPower}>
                   Random Power Up
+                </button>
+              </div>
+              <div className={styles.jumpRow}>
+                <input
+                  type="number"
+                  min="1"
+                  max={TOTAL_LEVELS}
+                  value={jumpLevelInput}
+                  onChange={(event) => setJumpLevelInput(event.target.value)}
+                  className={styles.jumpInput}
+                  placeholder="Level"
+                />
+                <button
+                  type="button"
+                  className={styles.button}
+                  onClick={() => goToLevel(Number.parseInt(jumpLevelInput, 10))}
+                >
+                  Jump Level
                 </button>
               </div>
             </div>

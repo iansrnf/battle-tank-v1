@@ -89,12 +89,19 @@ function makeLevelConfig(level) {
   if (isBossLevel(level)) {
     const bossTier = getBossTier(level);
     const archetype = getBossArchetype(level);
+    const abilities = [...archetype.abilities];
+
+    if (level >= 10 && !abilities.includes("dash")) {
+      abilities.push("dash");
+    }
+
     return {
       label: `Level ${level} Boss`,
       boss: true,
       bossTier,
       bossProfile: {
         ...archetype,
+        abilities,
         hp: 10 + bossTier * 5,
         speed: Math.min(110 + bossTier * 8, 220),
         size: Math.min(42 + bossTier, 58),

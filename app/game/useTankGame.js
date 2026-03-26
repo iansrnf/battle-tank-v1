@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { POWERUP_TYPES, WORLD } from "./config";
 import { drawGame } from "./render";
-import { applyPowerUpToState, getHudSnapshot, makeInitialState, spawnRandomPowerUp, startGameState, stepGame } from "./engine";
+import { applyPowerUpToState, getHudSnapshot, jumpToLevel, makeInitialState, spawnRandomPowerUp, startGameState, stepGame } from "./engine";
 import { getAiKeys } from "./ai";
 
 const BLOCKED_KEYS = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"]);
@@ -98,6 +98,13 @@ export function useTankGame() {
     syncHud();
   };
 
+  const goToLevel = (level) => {
+    jumpToLevel(stateRef.current, level);
+    keysRef.current.clear();
+    lastFrameRef.current = 0;
+    syncHud();
+  };
+
   return {
     canvasRef,
     world: WORLD,
@@ -105,6 +112,7 @@ export function useTankGame() {
     aiMode,
     grantPower,
     dropRandomPower,
+    goToLevel,
     resetGame,
     openMainMenu,
     toggleAiMode,

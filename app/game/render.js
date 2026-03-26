@@ -1,9 +1,12 @@
 import { DIR_VECTORS, POWERUP_STYLE, WORLD } from "./config";
 
-function drawTank(ctx, tank, color, turret) {
+function drawTank(ctx, tank, color, turret, alpha = 1) {
   const size = tank.size ?? WORLD.tankSize;
   const x = tank.x - size / 2;
   const y = tank.y - size / 2;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
 
   ctx.fillStyle = color;
   ctx.fillRect(x, y, size, size);
@@ -25,7 +28,10 @@ function drawTank(ctx, tank, color, turret) {
   ctx.lineTo(tank.x + direction.x * 18, tank.y + direction.y * 18);
   ctx.stroke();
 
-  if (!tank.isPlayerShielded) return;
+  if (!tank.isPlayerShielded) {
+    ctx.restore();
+    return;
+  }
 
   const shieldHp = tank.shieldHp ?? 0;
   const shieldRadius = size / 2 + 5;
@@ -48,6 +54,7 @@ function drawTank(ctx, tank, color, turret) {
     ctx.beginPath();
     ctx.arc(tank.x, tank.y, shieldRadius + 1, 0, Math.PI * 2);
     ctx.fill();
+    ctx.restore();
     return;
   }
 
@@ -80,6 +87,8 @@ function drawTank(ctx, tank, color, turret) {
     ctx.lineTo(tank.x + shieldRadius - 5, tank.y - 5);
     ctx.stroke();
   }
+
+  ctx.restore();
 }
 
 export function drawGame(ctx, state) {
@@ -130,6 +139,10 @@ export function drawGame(ctx, state) {
 
   for (const enemy of state.enemies) {
     const enemyColor = enemy.canDropPowerUp ? "#d14f4f" : "#8f98a3";
+    for (const afterImage of enemy.dashTrail ?? []) {
+      const trailAlpha = Math.max(0.12, (afterImage.ttl / 0.24) * 0.35);
+      drawTank(ctx, { ...enemy, ...afterImage }, enemyColor, enemy.isBoss ? "#ffd56b" : "#ffe1cd", trailAlpha);
+    }
     drawTank(ctx, enemy, enemyColor, enemy.isBoss ? "#ffd56b" : "#ffe1cd");
   }
 
