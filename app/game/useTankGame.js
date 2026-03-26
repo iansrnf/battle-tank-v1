@@ -7,6 +7,7 @@ import { getHudSnapshot, makeInitialState, startGameState, stepGame } from "./en
 import { getAiKeys } from "./ai";
 
 const BLOCKED_KEYS = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"]);
+const DEFAULT_AI_MODE = true;
 
 export function useTankGame() {
   const canvasRef = useRef(null);
@@ -14,9 +15,9 @@ export function useTankGame() {
   const keysRef = useRef(new Set());
   const rafRef = useRef(null);
   const lastFrameRef = useRef(0);
-  const aiModeRef = useRef(false);
+  const aiModeRef = useRef(DEFAULT_AI_MODE);
   const [hud, setHud] = useState(() => getHudSnapshot(stateRef.current));
-  const [aiMode, setAiMode] = useState(false);
+  const [aiMode, setAiMode] = useState(DEFAULT_AI_MODE);
 
   useEffect(() => {
     const handleKeyDown = (event) => {

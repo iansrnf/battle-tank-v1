@@ -3,9 +3,11 @@
 import styles from "./page.module.css";
 import { BOSS_LEVEL, TOTAL_LEVELS } from "./game/config";
 import { useTankGame } from "./game/useTankGame";
+import { useTwitchChat } from "./game/useTwitchChat";
 
 export default function Home() {
   const { canvasRef, world, hud, aiMode, resetGame, openMainMenu, toggleAiMode } = useTankGame();
+  const chatMessages = useTwitchChat();
   const { score, level, lives, enemyLeft, status, activePowerUps, showMenu, isTerminalStatus } = hud;
 
   return (
@@ -56,6 +58,38 @@ export default function Home() {
           Main Menu
         </button>
       </div>
+
+      <section className={styles.chatPanel}>
+        <div className={styles.chatHeader}>Live Feed</div>
+        <div className={styles.chatList}>
+          {chatMessages.length === 0 ? (
+            <div className={styles.chatEmpty}>Waiting for chat and alert activity...</div>
+          ) : (
+            chatMessages.map((message) => (
+              <div
+                key={message.id}
+                className={
+                  message.kind === "system"
+                    ? styles.chatSystemMessage
+                    : message.kind === "alert"
+                      ? styles.chatAlertMessage
+                      : styles.chatMessage
+                }
+              >
+                {message.kind === "system" ? (
+                  <span>{message.text}</span>
+                ) : message.kind === "alert" ? (
+                  <span>{message.text}</span>
+                ) : (
+                  <>
+                    <span className={styles.chatUser}>{message.user}:</span> {message.text}
+                  </>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </section>
     </main>
   );
 }
