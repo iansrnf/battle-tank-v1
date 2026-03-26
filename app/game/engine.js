@@ -19,6 +19,8 @@ const BOSS_DASH_TRAIL_INTERVAL = 0.04;
 const BOSS_DASH_TRAIL_TTL = 0.24;
 const BOSS_DASH_DISTANCE = 150;
 const MAX_ACTIVE_REGULAR_ENEMIES = 8;
+const FREEZE_RECOVERY_TIME = 3;
+const SCARE_DURATION = 5;
 
 function getShieldStageDuration(shieldHp) {
   return NORMAL_SHIELD_STAGE_TIMERS[shieldHp] ?? 0;
@@ -182,6 +184,9 @@ export function makeInitialState() {
     effects: {
       rapidfire: 0,
       spread: 0,
+      freeze: 0,
+      freezeRecovery: 0,
+      scare: 0,
     },
     explosions: [],
     restartTimer: null,
@@ -208,6 +213,9 @@ export function summarizePowerUps(state) {
   }
   if (state.effects.rapidfire > 0) buffs.push(`Rapid ${Math.ceil(state.effects.rapidfire)}s`);
   if (state.effects.spread > 0) buffs.push(`Spread ${Math.ceil(state.effects.spread)}s`);
+  if (state.effects.freeze > 0) buffs.push(`Freeze ${Math.ceil(state.effects.freeze)}s`);
+  else if (state.effects.freezeRecovery > 0) buffs.push(`Freeze Recovery ${Math.ceil(state.effects.freezeRecovery)}s`);
+  if (state.effects.scare > 0) buffs.push(`Scare ${Math.ceil(state.effects.scare)}s`);
   return buffs.length ? buffs.join(" | ") : "None";
 }
 
@@ -230,6 +238,11 @@ export function getHudSnapshot(state) {
     shieldHp: state.player.shieldHp ?? 0,
     shieldTimer: state.player.shieldTimer ?? 0,
     ultimateShieldTime: state.player.ultimateShieldTime ?? 0,
+    rapidfireTime: state.effects.rapidfire ?? 0,
+    spreadTime: state.effects.spread ?? 0,
+    freezeTime: state.effects.freeze ?? 0,
+    freezeRecoveryTime: state.effects.freezeRecovery ?? 0,
+    scareTime: state.effects.scare ?? 0,
   };
 }
 
@@ -305,6 +318,21 @@ function spawnQueuedEnemies(state) {
     });
     spawned += 1;
   }
+}
+
+function getEnemyFreezeFactor(state) {
+  if ((state.effects.freeze ?? 0) > 0) return 0;
+  if ((state.effects.freezeRecovery ?? 0) > 0) {
+    return 1 - state.effects.freezeRecovery / FREEZE_RECOVERY_TIME;
+  }
+  return 1;
+}
+
+function getScareVector(enemy, player) {
+  const dx = enemy.x - player.x;
+  const dy = enemy.y - player.y;
+  const length = Math.hypot(dx, dy) || 1;
+  return { x: dx / length, y: dy / length };
 }
 
 function spawnBullet(state, owner, x, y, dir) {
@@ -562,6 +590,17 @@ export function applyPowerUpToState(state, type) {
     return;
   }
 
+  if (type === "freeze") {
+    state.effects.freeze = POWERUP_STYLE.freeze.duration;
+    state.effects.freezeRecovery = 0;
+    return;
+  }
+
+  if (type === "scare") {
+    state.effects.scare = SCARE_DURATION;
+    return;
+  }
+
   if (type === "rapidfire" || type === "spread") {
     state.effects[type] += POWERUP_STYLE[type].duration;
   }
@@ -605,6 +644,16 @@ export function stepGame(state, keys, dt) {
   player.invincible = Math.max(0, player.invincible - dt);
   state.effects.rapidfire = Math.max(0, state.effects.rapidfire - dt);
   state.effects.spread = Math.max(0, state.effects.spread - dt);
+  state.effects.scare = Math.max(0, state.effects.scare - dt);
+  if (state.effects.freeze > 0) {
+    state.effects.freeze = Math.max(0, state.effects.freeze - dt);
+    if (state.effects.freeze <= 0) {
+      state.effects.freeze = 0;
+      state.effects.freezeRecovery = FREEZE_RECOVERY_TIME;
+    }
+  } else if (state.effects.freezeRecovery > 0) {
+    state.effects.freezeRecovery = Math.max(0, state.effects.freezeRecovery - dt);
+  }
 
   if (hasUltimateShield(player)) {
     player.ultimateShieldTime = Math.max(0, player.ultimateShieldTime - dt);
@@ -687,17 +736,34 @@ export function stepGame(state, keys, dt) {
     player.shootCd = state.effects.rapidfire > 0 ? 0.12 : 0.35;
   }
 
+  const enemyMoveFactor = getEnemyFreezeFactor(state);
+  const enemiesFullyFrozen = (state.effects.freeze ?? 0) > 0;
+
   for (const enemy of state.enemies) {
     enemy.changeTimer -= dt;
-    enemy.shootTimer -= dt;
+    if (!enemiesFullyFrozen) {
+      enemy.shootTimer -= dt;
+    }
 
     if (enemy.changeTimer <= 0) {
       enemy.dir = randomDir();
       enemy.changeTimer = 0.5 + Math.random() * 1.2;
     }
 
-    const vector = DIR_VECTORS[enemy.dir];
-    const speed = enemy.speed * dt;
+    let vector = DIR_VECTORS[enemy.dir];
+    if (state.effects.scare > 0) {
+      const scareVector = getScareVector(enemy, player);
+      enemy.dir =
+        Math.abs(scareVector.x) > Math.abs(scareVector.y)
+          ? scareVector.x < 0
+            ? "left"
+            : "right"
+          : scareVector.y < 0
+            ? "up"
+            : "down";
+      vector = scareVector;
+    }
+    const speed = enemy.speed * enemyMoveFactor * dt;
     const nextRect = rectFromTank({
       ...enemy,
       x: enemy.x + vector.x * speed,
@@ -712,10 +778,10 @@ export function stepGame(state, keys, dt) {
     }
 
     if (enemy.isBoss) {
-      updateBossBehavior(state, enemy, player, dt);
+      updateBossBehavior(state, enemy, player, dt * enemyMoveFactor);
     }
 
-    if (enemy.shootTimer <= 0) {
+    if (!enemiesFullyFrozen && enemy.shootTimer <= 0) {
       const muzzle = (enemy.size ?? WORLD.tankSize) / 2 + 6;
 
       if (enemy.isBoss) {

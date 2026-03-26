@@ -67,6 +67,7 @@ function formatStreamlabsEvent(eventData) {
         alertType: "tip",
         actor: donor,
         thankAction: "the tip",
+        thankDetail: amount || "",
         text: joinParts([`Tip from ${donor}`, amount, message]),
         time: Date.now(),
       };
@@ -81,6 +82,7 @@ function formatStreamlabsEvent(eventData) {
         alertType: "bits",
         actor: sender,
         thankAction: "the cheers",
+        thankDetail: amount,
         text: joinParts([`${sender} cheered`, amount, message]),
         time: Date.now(),
       };

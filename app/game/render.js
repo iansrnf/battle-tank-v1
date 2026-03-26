@@ -137,6 +137,10 @@ export function drawGame(ctx, state) {
     "#e6f3e8"
   );
 
+  const freezeFactor = state.effects.freeze > 0 ? 0 : state.effects.freezeRecovery > 0 ? 1 - state.effects.freezeRecovery / 3 : 1;
+  const freezeStrength = 1 - freezeFactor;
+  const scareStrength = Math.min(1, (state.effects.scare ?? 0) / 5);
+
   for (const enemy of state.enemies) {
     const enemyColor = enemy.canDropPowerUp ? "#d14f4f" : "#8f98a3";
     for (const afterImage of enemy.dashTrail ?? []) {
@@ -144,6 +148,49 @@ export function drawGame(ctx, state) {
       drawTank(ctx, { ...enemy, ...afterImage }, enemyColor, enemy.isBoss ? "#ffd56b" : "#ffe1cd", trailAlpha);
     }
     drawTank(ctx, enemy, enemyColor, enemy.isBoss ? "#ffd56b" : "#ffe1cd");
+
+    if (freezeStrength > 0.02) {
+      const pulse = (Math.sin(Date.now() / 120 + enemy.x * 0.01) + 1) / 2;
+      const auraRadius = (enemy.size ?? WORLD.tankSize) / 2 + 7 + pulse * 2;
+      ctx.strokeStyle = `rgba(150, 235, 255, ${0.35 + freezeStrength * 0.35})`;
+      ctx.lineWidth = 2 + freezeStrength;
+      ctx.beginPath();
+      ctx.arc(enemy.x, enemy.y, auraRadius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = `rgba(185, 245, 255, ${0.12 + freezeStrength * 0.16})`;
+      ctx.beginPath();
+      ctx.arc(enemy.x, enemy.y, auraRadius - 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = `rgba(220, 250, 255, ${0.28 + freezeStrength * 0.3})`;
+      ctx.beginPath();
+      ctx.moveTo(enemy.x - 8, enemy.y);
+      ctx.lineTo(enemy.x + 8, enemy.y);
+      ctx.moveTo(enemy.x, enemy.y - 8);
+      ctx.lineTo(enemy.x, enemy.y + 8);
+      ctx.stroke();
+    }
+
+    if (scareStrength > 0.02) {
+      const wobble = Math.sin(Date.now() / 90 + enemy.y * 0.03);
+      ctx.strokeStyle = `rgba(236, 170, 255, ${0.35 + scareStrength * 0.4})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(enemy.x - 5, enemy.y - 8, 4 + wobble * 0.4, Math.PI * 0.15, Math.PI * 1.85);
+      ctx.arc(enemy.x + 5, enemy.y - 8, 4 - wobble * 0.4, Math.PI * 0.15, Math.PI * 1.85);
+      ctx.stroke();
+
+      ctx.strokeStyle = `rgba(255, 215, 255, ${0.3 + scareStrength * 0.35})`;
+      ctx.beginPath();
+      ctx.moveTo(enemy.x - 8, enemy.y - 13);
+      ctx.lineTo(enemy.x - 5, enemy.y - 19);
+      ctx.lineTo(enemy.x - 2, enemy.y - 13);
+      ctx.moveTo(enemy.x + 2, enemy.y - 13);
+      ctx.lineTo(enemy.x + 5, enemy.y - 19);
+      ctx.lineTo(enemy.x + 8, enemy.y - 13);
+      ctx.stroke();
+    }
   }
 
   for (const bullet of state.bullets) {
@@ -169,38 +216,6 @@ export function drawGame(ctx, state) {
     ctx.beginPath();
     ctx.arc(explosion.x, explosion.y, radius, 0, Math.PI * 2);
     ctx.fill();
-  }
-
-  const activeHud = [];
-  if ((state.player.speedStacks ?? 0) > 0) {
-    activeHud.push({ name: `Speed +${state.player.speedStacks}`, t: null, color: "#ffe066" });
-  }
-  if ((state.player.ultimateShieldTime ?? 0) > 0) {
-    activeHud.push({ name: "Ultimate Shield", t: Math.ceil(state.player.ultimateShieldTime), color: "#ffe8a3" });
-  } else if ((state.player.shieldHp ?? 0) > 0) {
-    activeHud.push({ name: `Shield HP ${state.player.shieldHp}/3`, t: null, color: "#65b6ff" });
-    activeHud.push({ name: "Shield", t: Math.ceil(state.player.shieldTimer ?? 0), color: "#65b6ff" });
-  }
-  if (state.effects.rapidfire > 0) activeHud.push({ name: "Rapid", t: state.effects.rapidfire, color: "#ff9f43" });
-  if (state.effects.spread > 0) activeHud.push({ name: "Spread", t: state.effects.spread, color: "#a8ff60" });
-  if (activeHud.length > 0) {
-    ctx.textAlign = "left";
-    ctx.font = "bold 14px Verdana";
-    for (let index = 0; index < activeHud.length; index += 1) {
-      const item = activeHud[index];
-      const label = item.t == null ? item.name : `${item.name}: ${Math.ceil(item.t)}s`;
-      const textWidth = ctx.measureText(label).width;
-      const boxWidth = Math.max(156, Math.ceil(textWidth) + 18);
-      const boxX = 12;
-      const boxY = 14 + index * 28;
-      ctx.fillStyle = "rgba(6, 12, 20, 0.72)";
-      ctx.fillRect(boxX, boxY, boxWidth, 22);
-      ctx.strokeStyle = item.color;
-      ctx.lineWidth = 2;
-      ctx.strokeRect(boxX + 0.5, boxY + 0.5, boxWidth - 1, 21);
-      ctx.fillStyle = item.color;
-      ctx.fillText(label, boxX + 8, boxY + 16);
-    }
   }
 
   const activeBoss = state.enemies.find((enemy) => enemy.isBoss);

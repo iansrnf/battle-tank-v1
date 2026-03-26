@@ -12,7 +12,25 @@ export default function Home() {
   const [panelOpen, setPanelOpen] = useState(false);
   const [thankYouAlert, setThankYouAlert] = useState(null);
   const [jumpLevelInput, setJumpLevelInput] = useState("1");
-  const { score, level, lives, enemyLeft, status, activePowerUps, showMenu, isTerminalStatus } = hud;
+  const {
+    score,
+    level,
+    lives,
+    enemyLeft,
+    status,
+    activePowerUps,
+    showMenu,
+    isTerminalStatus,
+    speedStacks,
+    shieldHp,
+    shieldTimer,
+    ultimateShieldTime,
+    rapidfireTime,
+    spreadTime,
+    freezeTime,
+    freezeRecoveryTime,
+    scareTime,
+  } = hud;
   const latestAlert = useMemo(
     () => [...chatMessages].reverse().find((message) => message.kind === "alert" && message.actor && message.thankAction),
     [chatMessages]
@@ -32,8 +50,24 @@ export default function Home() {
   }, [latestAlert]);
 
   const thankYouText = thankYouAlert
-    ? `Thank you ${thankYouAlert.actor} for ${thankYouAlert.thankAction}`
+    ? `Thank you ${thankYouAlert.actor} for ${thankYouAlert.thankAction}${thankYouAlert.thankDetail ? ` ${thankYouAlert.thankDetail}` : ""}`
     : "";
+
+  const activeStatuses = [];
+  if (speedStacks > 0) activeStatuses.push({ label: `Speed +${speedStacks}`, colorClass: styles.statusSpeed });
+  if (ultimateShieldTime > 0) {
+    activeStatuses.push({ label: `Ultimate Shield: ${Math.ceil(ultimateShieldTime)}s`, colorClass: styles.statusUltimate });
+  } else if (shieldHp > 0) {
+    activeStatuses.push({ label: `Shield HP ${shieldHp}/3`, colorClass: styles.statusShield });
+    activeStatuses.push({ label: `Shield: ${Math.ceil(shieldTimer)}s`, colorClass: styles.statusShield });
+  }
+  if (rapidfireTime > 0) activeStatuses.push({ label: `Rapid: ${Math.ceil(rapidfireTime)}s`, colorClass: styles.statusRapid });
+  if (spreadTime > 0) activeStatuses.push({ label: `Spread: ${Math.ceil(spreadTime)}s`, colorClass: styles.statusSpread });
+  if (freezeTime > 0) activeStatuses.push({ label: `Freeze: ${Math.ceil(freezeTime)}s`, colorClass: styles.statusFreeze });
+  else if (freezeRecoveryTime > 0) {
+    activeStatuses.push({ label: `Freeze Recover: ${Math.ceil(freezeRecoveryTime)}s`, colorClass: styles.statusFreeze });
+  }
+  if (scareTime > 0) activeStatuses.push({ label: `Scare: ${Math.ceil(scareTime)}s`, colorClass: styles.statusScare });
 
   return (
     <main className={styles.wrap}>
@@ -49,6 +83,21 @@ export default function Home() {
       </div>
 
       <div className={styles.gameShell}>
+        <aside className={styles.statusPanel}>
+          <div className={styles.panelTitle}>Power Status</div>
+          <div className={styles.statusList}>
+            {activeStatuses.length === 0 ? (
+              <div className={styles.statusEmpty}>No active powers</div>
+            ) : (
+              activeStatuses.map((statusItem) => (
+                <div key={statusItem.label} className={`${styles.statusPill} ${statusItem.colorClass}`}>
+                  {statusItem.label}
+                </div>
+              ))
+            )}
+          </div>
+        </aside>
+
         <div className={styles.canvasFrame}>
           <canvas ref={canvasRef} className={styles.canvas} width={world.width} height={world.height} />
           {thankYouAlert && (
@@ -103,6 +152,12 @@ export default function Home() {
                 <button type="button" className={styles.button} onClick={() => grantPower("speed")}>
                   Speed +1
                 </button>
+                <button type="button" className={styles.button} onClick={() => grantPower("freeze")}>
+                  Freeze Time
+                </button>
+                <button type="button" className={styles.button} onClick={() => grantPower("scare")}>
+                  Scare
+                </button>
                 <button type="button" className={styles.button} onClick={dropRandomPower}>
                   Random Power Up
                 </button>
@@ -131,7 +186,7 @@ export default function Home() {
       </div>
 
       <div className={styles.controls}>
-        Move: WASD or Arrow Keys. Shoot: Space. Power Ups: Shield, Rapidfire, Spread Fire, Extra Life. Normal mode is capped at 2 bullets on-screen. Enemy colors: Red = can drop power-up, Gray = no drop.
+        Move: WASD or Arrow Keys. Shoot: Space. Power Ups: Shield, Rapidfire, Spread Fire, Extra Life, Freeze Time, Scare. Normal mode is capped at 2 bullets on-screen. Enemy colors: Red = can drop power-up, Gray = no drop.
       </div>
 
       <div className={styles.controls}>Active Power Ups: {activePowerUps}</div>

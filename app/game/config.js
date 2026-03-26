@@ -46,7 +46,7 @@ const BOSS_ARCHETYPES = [
   },
 ];
 
-export const POWERUP_TYPES = ["shield", "rapidfire", "spread", "extraLife", "speed"];
+export const POWERUP_TYPES = ["shield", "rapidfire", "spread", "extraLife", "speed", "freeze", "scare"];
 
 export const POWERUP_STYLE = {
   shield: { color: "#65b6ff", label: "S", duration: 20 },
@@ -54,6 +54,8 @@ export const POWERUP_STYLE = {
   spread: { color: "#a8ff60", label: "P", duration: 12 },
   extraLife: { color: "#ff5f8f", label: "+1", duration: 0 },
   speed: { color: "#ffe066", label: "SPD", duration: 0 },
+  freeze: { color: "#8fe8ff", label: "FRZ", duration: 5 },
+  scare: { color: "#d9a8ff", label: "SCR", duration: 5 },
 };
 
 const levelConfigCache = new Map();
