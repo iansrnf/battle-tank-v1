@@ -1,5 +1,29 @@
 import { DIR_VECTORS, POWERUP_STYLE, POWERUP_TYPES, TOTAL_LEVELS, WORLD, getLevelBricks, getLevelConfig } from "./config";
 
+const PLAYER_BASE_SPEED = 135;
+const PLAYER_SPEED_STACK_BONUS = 18;
+const PLAYER_MAX_SPEED_STACKS = 5;
+const PLAYER_MAX_SHIELD_HP = 3;
+const NORMAL_SHIELD_STAGE_TIMERS = {
+  3: 10,
+  2: 15,
+  1: 20,
+};
+const ULTIMATE_SHIELD_INCREMENT = 60;
+const ULTIMATE_SHIELD_MAX_TIME = 300;
+
+function getShieldStageDuration(shieldHp) {
+  return NORMAL_SHIELD_STAGE_TIMERS[shieldHp] ?? 0;
+}
+
+function hasUltimateShield(player) {
+  return (player.ultimateShieldTime ?? 0) > 0;
+}
+
+function hasNormalShield(player) {
+  return (player.shieldHp ?? 0) > 0 && !hasUltimateShield(player);
+}
+
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
@@ -109,15 +133,18 @@ export function makeInitialState() {
       x: WORLD.width / 2,
       y: WORLD.height - 70,
       dir: "up",
-      speed: 180,
+      speed: PLAYER_BASE_SPEED,
       shootCd: 0,
       invincible: 0,
+      speedStacks: 0,
+      shieldHp: 0,
+      shieldTimer: 0,
+      ultimateShieldTime: 0,
     },
     enemies: buildEnemiesForLevel(level),
     bullets: [],
     powerUps: [],
     effects: {
-      shield: 0,
       rapidfire: 0,
       spread: 0,
     },
@@ -134,11 +161,15 @@ export function startGameState() {
   };
 }
 
-export function summarizePowerUps(effects) {
+export function summarizePowerUps(state) {
   const buffs = [];
-  if (effects.shield > 0) buffs.push(`Shield ${Math.ceil(effects.shield)}s`);
-  if (effects.rapidfire > 0) buffs.push(`Rapid ${Math.ceil(effects.rapidfire)}s`);
-  if (effects.spread > 0) buffs.push(`Spread ${Math.ceil(effects.spread)}s`);
+  if (hasUltimateShield(state.player)) {
+    buffs.push(`Ultimate Shield ${Math.ceil(state.player.ultimateShieldTime)}s`);
+  } else if (hasNormalShield(state.player)) {
+    buffs.push(`Shield ${Math.ceil(state.player.shieldTimer)}s`);
+  }
+  if (state.effects.rapidfire > 0) buffs.push(`Rapid ${Math.ceil(state.effects.rapidfire)}s`);
+  if (state.effects.spread > 0) buffs.push(`Spread ${Math.ceil(state.effects.spread)}s`);
   return buffs.length ? buffs.join(" | ") : "None";
 }
 
@@ -149,7 +180,7 @@ export function getHudSnapshot(state) {
     lives: state.lives,
     level: state.level,
     enemyLeft: state.enemies.length,
-    activePowerUps: summarizePowerUps(state.effects),
+    activePowerUps: summarizePowerUps(state),
     status: state.status,
     showMenu: state.mode === "menu",
     isTerminalStatus: state.status === "Game Over" || state.status === "Victory",
@@ -157,6 +188,10 @@ export function getHudSnapshot(state) {
     bossHp: boss ? boss.hp : null,
     bossMaxHp: boss?.maxHp ?? null,
     restartTimer: state.restartTimer,
+    speedStacks: state.player.speedStacks ?? 0,
+    shieldHp: state.player.shieldHp ?? 0,
+    shieldTimer: state.player.shieldTimer ?? 0,
+    ultimateShieldTime: state.player.ultimateShieldTime ?? 0,
   };
 }
 
@@ -320,6 +355,53 @@ function resetPlayerPosition(player) {
   player.dir = "up";
 }
 
+function applyPermanentSpeedUpgrade(player) {
+  const nextStacks = Math.min(PLAYER_MAX_SPEED_STACKS, (player.speedStacks ?? 0) + 1);
+  player.speedStacks = nextStacks;
+  player.speed = PLAYER_BASE_SPEED + nextStacks * PLAYER_SPEED_STACK_BONUS;
+}
+
+function grantShield(player) {
+  if (hasUltimateShield(player)) {
+    player.ultimateShieldTime = Math.min(ULTIMATE_SHIELD_MAX_TIME, player.ultimateShieldTime + ULTIMATE_SHIELD_INCREMENT);
+    return;
+  }
+
+  if (hasNormalShield(player)) {
+    player.ultimateShieldTime = ULTIMATE_SHIELD_INCREMENT;
+    player.shieldHp = PLAYER_MAX_SHIELD_HP;
+    player.shieldTimer = 0;
+    return;
+  }
+
+  player.shieldHp = PLAYER_MAX_SHIELD_HP;
+  player.shieldTimer = getShieldStageDuration(player.shieldHp);
+  player.ultimateShieldTime = 0;
+}
+
+export function applyPowerUpToState(state, type) {
+  const player = state.player;
+
+  if (type === "extraLife") {
+    state.lives += 1;
+    return;
+  }
+
+  if (type === "shield") {
+    grantShield(player);
+    return;
+  }
+
+  if (type === "speed") {
+    applyPermanentSpeedUpgrade(player);
+    return;
+  }
+
+  if (type === "rapidfire" || type === "spread") {
+    state.effects[type] += POWERUP_STYLE[type].duration;
+  }
+}
+
 export function stepGame(state, keys, dt) {
   if (state.mode !== "play") return;
 
@@ -336,9 +418,28 @@ export function stepGame(state, keys, dt) {
   const player = state.player;
   player.shootCd = Math.max(0, player.shootCd - dt);
   player.invincible = Math.max(0, player.invincible - dt);
-  state.effects.shield = Math.max(0, state.effects.shield - dt);
   state.effects.rapidfire = Math.max(0, state.effects.rapidfire - dt);
   state.effects.spread = Math.max(0, state.effects.spread - dt);
+
+  if (hasUltimateShield(player)) {
+    player.ultimateShieldTime = Math.max(0, player.ultimateShieldTime - dt);
+    if (player.ultimateShieldTime <= 0) {
+      player.ultimateShieldTime = 0;
+      player.shieldHp = 1;
+      player.shieldTimer = getShieldStageDuration(1);
+    }
+  } else if (hasNormalShield(player)) {
+    player.shieldTimer = Math.max(0, player.shieldTimer - dt);
+    if (player.shieldTimer <= 0) {
+      if (player.shieldHp > 1) {
+        player.shieldHp -= 1;
+        player.shieldTimer = getShieldStageDuration(player.shieldHp);
+      } else {
+        player.shieldHp = 0;
+        player.shieldTimer = 0;
+      }
+    }
+  }
 
   let moveX = 0;
   let moveY = 0;
@@ -495,8 +596,11 @@ export function stepGame(state, keys, dt) {
 
     if (!consumed && bullet.owner === "enemy" && player.invincible <= 0 && hit(bulletRect, rectFromTank(player))) {
       consumed = true;
-      if (state.effects.shield > 0) {
-        state.effects.shield = 0;
+      if (hasUltimateShield(player)) {
+        player.invincible = 0.2;
+      } else if (hasNormalShield(player)) {
+        player.shieldHp -= 1;
+        player.shieldTimer = player.shieldHp > 0 ? Math.max(player.shieldTimer, 1.5) : 0;
         player.invincible = 0.3;
       } else {
         state.lives -= 1;
@@ -524,11 +628,7 @@ export function stepGame(state, keys, dt) {
     };
 
     if (hit(playerRect, powerUpRect)) {
-      if (powerUp.type === "extraLife") {
-        state.lives += 1;
-      } else {
-        state.effects[powerUp.type] += POWERUP_STYLE[powerUp.type].duration;
-      }
+      applyPowerUpToState(state, powerUp.type);
       continue;
     }
 

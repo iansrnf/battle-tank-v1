@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { WORLD } from "./config";
+import { POWERUP_TYPES, WORLD } from "./config";
 import { drawGame } from "./render";
-import { getHudSnapshot, makeInitialState, startGameState, stepGame } from "./engine";
+import { applyPowerUpToState, getHudSnapshot, makeInitialState, startGameState, stepGame } from "./engine";
 import { getAiKeys } from "./ai";
 
 const BLOCKED_KEYS = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"]);
@@ -87,11 +87,18 @@ export function useTankGame() {
     });
   };
 
+  const grantPower = (type) => {
+    if (!POWERUP_TYPES.includes(type)) return;
+    applyPowerUpToState(stateRef.current, type);
+    syncHud();
+  };
+
   return {
     canvasRef,
     world: WORLD,
     hud,
     aiMode,
+    grantPower,
     resetGame,
     openMainMenu,
     toggleAiMode,

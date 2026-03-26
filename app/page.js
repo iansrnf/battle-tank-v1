@@ -1,13 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import styles from "./page.module.css";
 import { BOSS_INTERVAL, TOTAL_LEVELS } from "./game/config";
 import { useTankGame } from "./game/useTankGame";
 import { useTwitchChat } from "./game/useTwitchChat";
 
 export default function Home() {
-  const { canvasRef, world, hud, aiMode, resetGame, openMainMenu, toggleAiMode } = useTankGame();
+  const { canvasRef, world, hud, aiMode, grantPower, resetGame, openMainMenu, toggleAiMode } = useTankGame();
   const chatMessages = useTwitchChat();
+  const [panelOpen, setPanelOpen] = useState(false);
   const { score, level, lives, enemyLeft, status, activePowerUps, showMenu, isTerminalStatus } = hud;
 
   return (
@@ -23,20 +25,50 @@ export default function Home() {
         </div>
       </div>
 
-      <div className={styles.canvasFrame}>
-        <canvas ref={canvasRef} className={styles.canvas} width={world.width} height={world.height} />
-        {showMenu && (
-          <div className={styles.menuOverlay}>
-            <h2 className={styles.menuTitle}>Main Menu</h2>
-            <p className={styles.menuText}>Battle Tank Classic</p>
-            <p className={styles.menuText}>
-              {TOTAL_LEVELS} random levels, boss fights every {BOSS_INTERVAL} levels, and power-ups.
-            </p>
-            <button type="button" className={styles.button} onClick={resetGame}>
-              Start Game
-            </button>
-          </div>
-        )}
+      <div className={styles.gameShell}>
+        <div className={styles.canvasFrame}>
+          <canvas ref={canvasRef} className={styles.canvas} width={world.width} height={world.height} />
+          {showMenu && (
+            <div className={styles.menuOverlay}>
+              <h2 className={styles.menuTitle}>Main Menu</h2>
+              <p className={styles.menuText}>Battle Tank Classic</p>
+              <p className={styles.menuText}>
+                {TOTAL_LEVELS} random levels, boss fights every {BOSS_INTERVAL} levels, and power-ups.
+              </p>
+              <button type="button" className={styles.button} onClick={resetGame}>
+                Start Game
+              </button>
+            </div>
+          )}
+        </div>
+
+        <aside className={`${styles.sidePanel} ${panelOpen ? styles.sidePanelOpen : styles.sidePanelClosed}`}>
+          <button type="button" className={styles.panelToggle} onClick={() => setPanelOpen((current) => !current)}>
+            {panelOpen ? "Hide Tweaks" : "Show Tweaks"}
+          </button>
+          {panelOpen && (
+            <div className={styles.panelBody}>
+              <div className={styles.panelTitle}>Tank Tweaks</div>
+              <div className={styles.panelButtons}>
+                <button type="button" className={styles.button} onClick={() => grantPower("shield")}>
+                  Shield
+                </button>
+                <button type="button" className={styles.button} onClick={() => grantPower("rapidfire")}>
+                  Rapidfire
+                </button>
+                <button type="button" className={styles.button} onClick={() => grantPower("spread")}>
+                  Spread
+                </button>
+                <button type="button" className={styles.button} onClick={() => grantPower("extraLife")}>
+                  Extra Life
+                </button>
+                <button type="button" className={styles.button} onClick={() => grantPower("speed")}>
+                  Speed +1
+                </button>
+              </div>
+            </div>
+          )}
+        </aside>
       </div>
 
       <div className={styles.controls}>

@@ -27,11 +27,59 @@ function drawTank(ctx, tank, color, turret) {
 
   if (!tank.isPlayerShielded) return;
 
-  ctx.strokeStyle = "rgba(101, 182, 255, 0.9)";
-  ctx.lineWidth = 3;
+  const shieldHp = tank.shieldHp ?? 0;
+  const shieldRadius = size / 2 + 5;
+  const shieldPulse = (Math.sin(Date.now() / 180) + 1) / 2;
+
+  if (tank.isUltimateShielded) {
+    ctx.strokeStyle = `rgba(255, 240, 150, ${0.72 + shieldPulse * 0.2})`;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(tank.x, tank.y, shieldRadius + shieldPulse * 2, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.strokeStyle = `rgba(120, 230, 255, ${0.6 + shieldPulse * 0.25})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(tank.x, tank.y, shieldRadius + 6 - shieldPulse * 2, Math.PI * 0.15, Math.PI * 1.85);
+    ctx.stroke();
+
+    ctx.fillStyle = `rgba(255, 242, 170, ${0.12 + shieldPulse * 0.08})`;
+    ctx.beginPath();
+    ctx.arc(tank.x, tank.y, shieldRadius + 1, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+
+  const shieldColors = {
+    3: "rgba(101, 182, 255, 0.95)",
+    2: "rgba(126, 230, 255, 0.92)",
+    1: "rgba(255, 206, 120, 0.95)",
+  };
+
+  ctx.strokeStyle = shieldColors[shieldHp] || "rgba(101, 182, 255, 0.9)";
+  ctx.lineWidth = shieldHp >= 3 ? 4 : shieldHp === 2 ? 3 : 2;
   ctx.beginPath();
-  ctx.arc(tank.x, tank.y, size / 2 + 5, 0, Math.PI * 2);
+  ctx.arc(tank.x, tank.y, shieldRadius, 0, Math.PI * 2);
   ctx.stroke();
+
+  if (shieldHp <= 2) {
+    ctx.strokeStyle = shieldHp === 2 ? "rgba(200, 247, 255, 0.78)" : "rgba(255, 170, 90, 0.88)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(tank.x, tank.y, shieldRadius - 4, Math.PI * 0.2, Math.PI * 1.5);
+    ctx.stroke();
+  }
+
+  if (shieldHp === 1) {
+    ctx.strokeStyle = "rgba(255, 135, 70, 0.95)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(tank.x - shieldRadius + 4, tank.y - 2);
+    ctx.lineTo(tank.x - 4, tank.y + 3);
+    ctx.lineTo(tank.x + shieldRadius - 5, tank.y - 5);
+    ctx.stroke();
+  }
 }
 
 export function drawGame(ctx, state) {
@@ -56,7 +104,11 @@ export function drawGame(ctx, state) {
 
   drawTank(
     ctx,
-    { ...state.player, isPlayerShielded: state.effects.shield > 0 },
+    {
+      ...state.player,
+      isPlayerShielded: state.player.ultimateShieldTime > 0 || state.player.shieldHp > 0,
+      isUltimateShielded: state.player.ultimateShieldTime > 0,
+    },
     state.player.invincible > 0 ? "#7da9d8" : "#5fd36a",
     "#e6f3e8"
   );
@@ -92,7 +144,15 @@ export function drawGame(ctx, state) {
   }
 
   const activeHud = [];
-  if (state.effects.shield > 0) activeHud.push({ name: "Shield", t: state.effects.shield, color: "#65b6ff" });
+  if ((state.player.speedStacks ?? 0) > 0) {
+    activeHud.push({ name: `Speed +${state.player.speedStacks}`, t: null, color: "#ffe066" });
+  }
+  if ((state.player.ultimateShieldTime ?? 0) > 0) {
+    activeHud.push({ name: "Ultimate Shield", t: Math.ceil(state.player.ultimateShieldTime), color: "#ffe8a3" });
+  } else if ((state.player.shieldHp ?? 0) > 0) {
+    activeHud.push({ name: `Shield HP ${state.player.shieldHp}/3`, t: null, color: "#65b6ff" });
+    activeHud.push({ name: "Shield", t: Math.ceil(state.player.shieldTimer ?? 0), color: "#65b6ff" });
+  }
   if (state.effects.rapidfire > 0) activeHud.push({ name: "Rapid", t: state.effects.rapidfire, color: "#ff9f43" });
   if (state.effects.spread > 0) activeHud.push({ name: "Spread", t: state.effects.spread, color: "#a8ff60" });
   if (activeHud.length > 0) {
@@ -108,7 +168,7 @@ export function drawGame(ctx, state) {
       ctx.lineWidth = 2;
       ctx.strokeRect(boxX + 0.5, boxY + 0.5, 155, 21);
       ctx.fillStyle = item.color;
-      ctx.fillText(`${item.name}: ${Math.ceil(item.t)}s`, boxX + 8, boxY + 16);
+      ctx.fillText(item.t == null ? item.name : `${item.name}: ${Math.ceil(item.t)}s`, boxX + 8, boxY + 16);
     }
   }
 

@@ -52,6 +52,18 @@ function hasObstacleInRay(state, player, direction, target) {
 }
 
 function chooseTarget(state) {
+  const hasUltimateShield = (state.player.ultimateShieldTime ?? 0) > 0;
+
+  if (hasUltimateShield && state.enemies.length > 0) {
+    return state.enemies.reduce((closest, enemy) => {
+      const distance = Math.hypot(enemy.x - state.player.x, enemy.y - state.player.y);
+      if (!closest || distance < closest.distance) {
+        return { type: "enemy", entity: enemy, distance };
+      }
+      return closest;
+    }, null);
+  }
+
   if (state.powerUps.length > 0) {
     return state.powerUps.reduce((closest, powerUp) => {
       const distance = Math.hypot(powerUp.x - state.player.x, powerUp.y - state.player.y);
@@ -127,7 +139,8 @@ export function getAiKeys(state) {
   const keys = new Set();
   if (!state.running || state.mode !== "play") return keys;
 
-  if (dodgeIncomingBullets(state, keys)) {
+  const hasUltimateShield = (state.player.ultimateShieldTime ?? 0) > 0;
+  if (!hasUltimateShield && dodgeIncomingBullets(state, keys)) {
     return keys;
   }
 
