@@ -1,16 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import styles from "./page.module.css";
 import { BOSS_INTERVAL, TOTAL_LEVELS } from "./game/config";
 import { useTankGame } from "./game/useTankGame";
 import { useTwitchChat } from "./game/useTwitchChat";
 
 export default function Home() {
-  const { canvasRef, world, hud, aiMode, grantPower, resetGame, openMainMenu, toggleAiMode } = useTankGame();
+  const { canvasRef, world, hud, aiMode, grantPower, dropRandomPower, resetGame, openMainMenu, toggleAiMode } = useTankGame();
   const chatMessages = useTwitchChat();
   const [panelOpen, setPanelOpen] = useState(false);
+  const [thankYouAlert, setThankYouAlert] = useState(null);
   const { score, level, lives, enemyLeft, status, activePowerUps, showMenu, isTerminalStatus } = hud;
+  const latestAlert = useMemo(
+    () => [...chatMessages].reverse().find((message) => message.kind === "alert" && message.actor && message.thankAction),
+    [chatMessages]
+  );
+
+  useEffect(() => {
+    if (!latestAlert) return;
+
+    setThankYouAlert((current) => (current?.id === latestAlert.id ? current : latestAlert));
+    const timeout = window.setTimeout(() => {
+      setThankYouAlert((current) => (current?.id === latestAlert.id ? null : current));
+    }, 5000);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [latestAlert]);
+
+  const thankYouText = thankYouAlert
+    ? `Thank you ${thankYouAlert.actor} for ${thankYouAlert.thankAction}`
+    : "";
 
   return (
     <main className={styles.wrap}>
@@ -28,6 +50,21 @@ export default function Home() {
       <div className={styles.gameShell}>
         <div className={styles.canvasFrame}>
           <canvas ref={canvasRef} className={styles.canvas} width={world.width} height={world.height} />
+          {thankYouAlert && (
+            <div className={styles.thankOverlay}>
+              <div className={styles.thankWave} aria-live="polite">
+                {thankYouText.split("").map((char, index) => (
+                  <span
+                    key={`${thankYouAlert.id}-${index}`}
+                    className={styles.thankChar}
+                    style={{ animationDelay: `${index * 0.04}s` }}
+                  >
+                    {char === " " ? "\u00A0" : char}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
           {showMenu && (
             <div className={styles.menuOverlay}>
               <h2 className={styles.menuTitle}>Main Menu</h2>
@@ -64,6 +101,9 @@ export default function Home() {
                 </button>
                 <button type="button" className={styles.button} onClick={() => grantPower("speed")}>
                   Speed +1
+                </button>
+                <button type="button" className={styles.button} onClick={dropRandomPower}>
+                  Random Power Up
                 </button>
               </div>
             </div>

@@ -139,12 +139,32 @@ export function getAiKeys(state) {
   const keys = new Set();
   if (!state.running || state.mode !== "play") return keys;
 
+  const target = chooseTarget(state);
+  if (target?.type === "powerUp") {
+    const deltaX = target.entity.x - state.player.x;
+    const deltaY = target.entity.y - state.player.y;
+    addMoveKeys(keys, deltaX, deltaY);
+
+    const fireDirection = getAlignedDirection(state.player, target.entity);
+    if (fireDirection && state.enemies.length > 0) {
+      keys.add(
+        fireDirection === "up"
+          ? "ArrowUp"
+          : fireDirection === "down"
+            ? "ArrowDown"
+            : fireDirection === "left"
+              ? "ArrowLeft"
+              : "ArrowRight"
+      );
+    }
+    return keys;
+  }
+
   const hasUltimateShield = (state.player.ultimateShieldTime ?? 0) > 0;
   if (!hasUltimateShield && dodgeIncomingBullets(state, keys)) {
     return keys;
   }
 
-  const target = chooseTarget(state);
   if (!target) return keys;
 
   const deltaX = target.entity.x - state.player.x;

@@ -21,10 +21,9 @@ function parsePrivmsg(line) {
   if (!match) return null;
 
   const [, displayName, message] = match;
-  const cleanName = displayName || "viewer";
   return {
     id: createMessageId("chat"),
-    user: cleanName,
+    user: displayName || "viewer",
     text: message,
     kind: "chat",
     time: Date.now(),
@@ -50,7 +49,7 @@ function getTipAmount(entry) {
 }
 
 function joinParts(parts) {
-  return parts.filter(Boolean).join(" • ");
+  return parts.filter(Boolean).join(" | ");
 }
 
 function formatStreamlabsEvent(eventData) {
@@ -66,6 +65,8 @@ function formatStreamlabsEvent(eventData) {
         id: createMessageId("tip"),
         kind: "alert",
         alertType: "tip",
+        actor: donor,
+        thankAction: "the tip",
         text: joinParts([`Tip from ${donor}`, amount, message]),
         time: Date.now(),
       };
@@ -78,18 +79,24 @@ function formatStreamlabsEvent(eventData) {
         id: createMessageId("bits"),
         kind: "alert",
         alertType: "bits",
+        actor: sender,
+        thankAction: "the cheers",
         text: joinParts([`${sender} cheered`, amount, message]),
         time: Date.now(),
       };
     }
-    case "follow":
+    case "follow": {
+      const actor = getDisplayName(entry);
       return {
         id: createMessageId("follow"),
         kind: "alert",
         alertType: "follow",
-        text: `${getDisplayName(entry)} followed the channel`,
+        actor,
+        thankAction: "following",
+        text: `${actor} followed the channel`,
         time: Date.now(),
       };
+    }
     case "subscription": {
       const user = getDisplayName(entry);
       const months = entry.months ? `${entry.months} month${entry.months === 1 ? "" : "s"}` : "";
@@ -99,6 +106,8 @@ function formatStreamlabsEvent(eventData) {
         id: createMessageId("sub"),
         kind: "alert",
         alertType: "subscription",
+        actor: user,
+        thankAction: "subscribing",
         text: joinParts([`${user} subscribed`, months, plan, message]),
         time: Date.now(),
       };
@@ -134,14 +143,6 @@ export async function GET() {
       let heartbeat;
       let closed = false;
 
-      const emit = (payload) => {
-        if (closed) return;
-        const sent = sendSse(controller, payload);
-        if (!sent) {
-          finish();
-        }
-      };
-
       const finish = () => {
         if (closed) return;
         closed = true;
@@ -157,8 +158,10 @@ export async function GET() {
         } catch {}
       };
 
-      const closeAll = () => {
-        finish();
+      const emit = (payload) => {
+        if (closed) return;
+        const sent = sendSse(controller, payload);
+        if (!sent) finish();
       };
 
       try {
@@ -297,7 +300,7 @@ export async function GET() {
           text: error instanceof Error ? error.message : "Failed to start chat stream.",
           time: Date.now(),
         });
-        closeAll();
+        finish();
       }
     },
     cancel() {},

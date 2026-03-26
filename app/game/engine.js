@@ -9,8 +9,9 @@ const NORMAL_SHIELD_STAGE_TIMERS = {
   2: 15,
   1: 20,
 };
-const ULTIMATE_SHIELD_INCREMENT = 60;
-const ULTIMATE_SHIELD_MAX_TIME = 300;
+const ULTIMATE_SHIELD_BASE_TIME = 60;
+const ULTIMATE_SHIELD_INCREMENT = 30;
+const ULTIMATE_SHIELD_MAX_TIME = 120;
 
 function getShieldStageDuration(shieldHp) {
   return NORMAL_SHIELD_STAGE_TIMERS[shieldHp] ?? 0;
@@ -353,6 +354,35 @@ function spawnPowerUp(state, x, y) {
   });
 }
 
+export function spawnRandomPowerUp(state) {
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    const x = 32 + Math.random() * (WORLD.width - 64);
+    const y = 32 + Math.random() * (WORLD.height - 64);
+    const candidate = { x: x - 8, y: y - 8, w: 16, h: 16 };
+
+    const blockedByWall = state.bricks.some((wall) => hit(candidate, wall));
+    const blockedByPlayer = hit(candidate, rectFromTank(state.player));
+    const blockedByEnemy = state.enemies.some((enemy) => hit(candidate, rectFromTank(enemy)));
+    const blockedByPowerUp = state.powerUps.some((powerUp) =>
+      hit(candidate, {
+        x: powerUp.x - powerUp.size / 2,
+        y: powerUp.y - powerUp.size / 2,
+        w: powerUp.size,
+        h: powerUp.size,
+      })
+    );
+
+    if (blockedByWall || blockedByPlayer || blockedByEnemy || blockedByPowerUp) {
+      continue;
+    }
+
+    spawnPowerUp(state, x, y);
+    return true;
+  }
+
+  return false;
+}
+
 function resetPlayerPosition(player) {
   player.x = WORLD.width / 2;
   player.y = WORLD.height - 70;
@@ -372,7 +402,7 @@ function grantShield(player) {
   }
 
   if (hasNormalShield(player)) {
-    player.ultimateShieldTime = ULTIMATE_SHIELD_INCREMENT;
+    player.ultimateShieldTime = ULTIMATE_SHIELD_BASE_TIME;
     player.shieldHp = PLAYER_MAX_SHIELD_HP;
     player.shieldTimer = 0;
     return;

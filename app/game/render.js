@@ -175,15 +175,18 @@ export function drawGame(ctx, state) {
     ctx.font = "bold 14px Verdana";
     for (let index = 0; index < activeHud.length; index += 1) {
       const item = activeHud[index];
+      const label = item.t == null ? item.name : `${item.name}: ${Math.ceil(item.t)}s`;
+      const textWidth = ctx.measureText(label).width;
+      const boxWidth = Math.max(156, Math.ceil(textWidth) + 18);
       const boxX = 12;
       const boxY = 14 + index * 28;
       ctx.fillStyle = "rgba(6, 12, 20, 0.72)";
-      ctx.fillRect(boxX, boxY, 156, 22);
+      ctx.fillRect(boxX, boxY, boxWidth, 22);
       ctx.strokeStyle = item.color;
       ctx.lineWidth = 2;
-      ctx.strokeRect(boxX + 0.5, boxY + 0.5, 155, 21);
+      ctx.strokeRect(boxX + 0.5, boxY + 0.5, boxWidth - 1, 21);
       ctx.fillStyle = item.color;
-      ctx.fillText(item.t == null ? item.name : `${item.name}: ${Math.ceil(item.t)}s`, boxX + 8, boxY + 16);
+      ctx.fillText(label, boxX + 8, boxY + 16);
     }
   }
 
